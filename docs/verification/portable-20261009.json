@@ -1,0 +1,77 @@
+{
+  "verified_at": "2026-10-09",
+  "artifact": "AnotherMe-Portable-Windows-x64.zip",
+  "bytes": 708478157,
+  "scope": "Windows developer machine, real ZIP extracted into a Chinese path with spaces, PATH limited to Windows system directories. Not a clean VM or cross-version Windows test.",
+  "model": "qwen3-4b-local",
+  "inference": "real local API, no Codex CLI; no cloud requests",
+  "checks": {
+    "archive_contains_no_personal_data_keys_or_model_weights": true,
+    "start_bat_works_without_system_python_in_chinese_space_path": true,
+    "bundled_converter_is_detected": true,
+    "double_click_reuses_same_service": true,
+    "actual_browser_first_run_and_model_configuration": true,
+    "actual_background_worker_handles_md_pdf_docx_and_doc": true,
+    "word_previews_are_created_without_microsoft_word": true,
+    "all_uploaded_originals_are_retained": true,
+    "model_catalog_uses_real_api_without_codex": true,
+    "real_api_json_connection_test": true,
+    "credentials_not_exposed_to_browser": true,
+    "real_api_second_round_selects_from_imported_questions": true,
+    "model_key_course_and_chat_survive_stop_and_restart": true,
+    "stop_bat_stops_only_this_copy": true
+  },
+  "browser": {
+    "checks": {
+      "first_run_automatically_opens_api_guide_and_detects_bundled_converter": true,
+      "real_persistent_storage_location_is_visible": true,
+      "real_api_test_save_and_finish_opens_materials_and_clears_key": true,
+      "manual_model_and_encrypted_key_are_reflected_in_settings": true,
+      "mobile_guide_has_no_horizontal_overflow": true,
+      "skip_explicitly_switches_to_local_search": true,
+      "guide_completion_survives_reload": true,
+      "no_browser_javascript_errors": true
+    },
+    "passed": true,
+    "errors": [],
+    "note": "真实解压包 + Edge + 本机 Qwen API，桌面与 390px 布局；非其他设备验证"
+  },
+  "documents": [
+    {
+      "name": "示例课程-期末试题.md",
+      "status": "ready",
+      "questions": 2,
+      "notes": []
+    },
+    {
+      "name": "fixture.docx",
+      "status": "ready",
+      "questions": 1,
+      "notes": [
+        "部分页面无可用文字，保留原页；OCR 尚未完成或未能识别",
+        "使用 LibreOffice 本地转换；字体、公式与分页可能和 Microsoft Word 不同，请对照原件核对",
+        "原题号 一 未能确认在转换 PDF 中的完整边界，保留原文件入口",
+        "本地文档转 PDF；已定位并裁剪 0/1 道题；原段落定位保留"
+      ]
+    },
+    {
+      "name": "fixture.doc",
+      "status": "partial",
+      "questions": 1,
+      "notes": [
+        "部分页面无可用文字，保留原页；OCR 尚未完成或未能识别",
+        "使用 LibreOffice 本地转换；字体、公式与分页可能和 Microsoft Word 不同，请对照原件核对",
+        "本地将原 DOC 转 PDF 后定位裁剪"
+      ]
+    },
+    {
+      "name": "matrix.pdf",
+      "status": "ready",
+      "questions": 1,
+      "notes": []
+    }
+  ],
+  "elapsed_seconds": 102.94,
+  "privacy": "Projection of local verification records; developer paths, process IDs, questions, conversations and credentials are omitted.",
+  "prior_failures": "Long-path Word conversion and a settings/catalog race failed earlier checks; fixed before this run. Verification-script false positives also preserved locally. The failed runs are not counted as passes."
+}

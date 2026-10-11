@@ -1,0 +1,42 @@
+.venv*/
+# Local credentials and machine-specific configuration
+.env
+.env.*
+!.env.example
+# Everything under data is local by default; only these fictional fixtures ship.
+/data/*
+!/data/knowledge/
+/data/knowledge/*
+!/data/knowledge/demo.md
+!/data/knowledge/memory_demo.md
+/user-data/
+# Imported teaching pages and local research notes are not distribution inputs.
+/file/
+/task.md
+/docs/WECHAT_UI_DEMO.md
+/docs/STYLE_EVALUATION.md
+/docs/EVALUATION.md
+/docs/TASK_QUALITY.md
+data/models/paddle/
+data/evaluation/question_bank/paddle/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.gguf
+*.safetensors
+data/runtime/
+data/question_bank/
+.tmp/
+dist/
+build/
+WechatExport*/
+data/private/
+data/processed/wechat*/
+data/evaluation/t12/**/runtime/

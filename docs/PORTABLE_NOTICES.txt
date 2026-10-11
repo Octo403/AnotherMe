@@ -1,0 +1,23 @@
+第三方组件
+
+本包包含独立 CPython、Python 依赖，以及未修改的 LibreOffice 转换组件。
+版本见 components.json；各组件的原始版权和许可文件保留在 runtime 和 tools 目录中。
+本说明不替代这些许可文件。本包未捆绑模型权重、API 凭证或个人资料。
+
+CPython / Astral python-build-standalone:
+https://github.com/astral-sh/python-build-standalone
+https://www.python.org/psf/license/
+
+LibreOffice:
+https://www.libreoffice.org/about-us/licenses/
+官方二进制和对应源码下载：
+https://download.documentfoundation.org/libreoffice/stable/
+https://download.documentfoundation.org/libreoffice/src/
+
+PyMuPDF:
+https://pymupdf.readthedocs.io/en/latest/about.html#license-and-copyright
+发行包内保留其许可；分发和修改应遵守相应许可条款。
+
+可选 7-Zip:
+https://www.7-zip.org/license.txt
+https://www.7-zip.org/download.html

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AnotherMe 本人盲评</title>
+<style>
+body{font:16px/1.7 system-ui,sans-serif;max-width:1080px;margin:40px auto;padding:0 20px;color:#243248;background:#f5f7fa}
+h1{font-size:26px}section{background:white;border:1px solid #dae0e8;border-radius:12px;padding:20px;margin:16px 0}
+article{border-top:1px solid #dae0e8;padding:16px 0}pre{white-space:pre-wrap;font:inherit;background:#f5f7fa;padding:12px;border-radius:8px}
+input,select,textarea,button{font:inherit;padding:7px;border:1px solid #bac4d1;border-radius:6px}textarea{width:95%;min-height:65px}
+label{display:inline-block;margin-right:12px}button{background:#234f83;color:white;cursor:pointer}.note{color:#596a7e}
+</style>
+<h1>AnotherMe 本人盲评</h1>
+<p>每题有三份匿名回答。请按自然度、像不像本人、场景适配各评 1—5 分，并写下具体哪里像或不像。</p>
+<p class="note">此页面离线运行，不发送资料。先加载生成后的 ratings.json；可随时下载进度，下次重新加载继续。没有回答时不能评分。</p>
+<section>
+<label>评分者 <input id="rater" placeholder="本人或你的代称"></label>
+<label>加载记录 <input id="file" type="file" accept=".json"></label>
+<p><label>题目 <select id="case"></select></label><button id="download" disabled>下载评分记录</button></p>
+<p id="progress" class="note">等待加载记录。</p>
+</section>
+<section id="content" hidden><h2 id="question"></h2><div id="answers"></div></section>
+<script>
+let data=null;
+const byId=id=>document.getElementById(id);
+function progress(){
+ const rows=data.cases.flatMap(c=>c.answers);
+ const rated=rows.filter(a=>['naturalness','similarity','scene_fit'].every(k=>Number.isInteger(a[k]))&&a.comment.trim()).length;
+ byId('progress').textContent=`已填写 ${rated}/${rows.length} 份评分；请保存下载的记录。`;
+}
+function show(){
+ const c=data.cases[Number(byId('case').value)];
+ byId('question').textContent=c.case_id+' · '+c.question;
+ byId('answers').replaceChildren();
+ c.answers.forEach(a=>{
+  const article=document.createElement('article');
+  const title=document.createElement('h3');title.textContent=a.id;article.append(title);
+  const pre=document.createElement('pre');pre.textContent=a.answer??'回答尚未生成。请完成模型生成后加载新的评分记录。';article.append(pre);
+  [['naturalness','自然度'],['similarity','像本人'],['scene_fit','场景适配']].forEach(([key,text])=>{
+   const label=document.createElement('label');label.append(document.createTextNode(text+' '));
+   const select=document.createElement('select');
+   for(let n=0;n<=5;n++){const o=document.createElement('option');o.value=n||'';o.textContent=n||'未评分';select.append(o);}
+   select.value=a[key]??'';select.disabled=a.answer==null;
+   select.onchange=()=>{a[key]=select.value?Number(select.value):null;progress();};label.append(select);article.append(label);
+  });
+  const p=document.createElement('p');p.textContent='具体哪里像或不像：';article.append(p);
+  const input=document.createElement('textarea');input.value=a.comment||'';input.disabled=a.answer==null;
+  input.oninput=()=>{a.comment=input.value;progress();};article.append(input);byId('answers').append(article);
+ });
+ byId('content').hidden=false;
+}
+byId('file').onchange=async()=>{
+ try{
+  const parsed=JSON.parse(await byId('file').files[0].text());
+  if(!Array.isArray(parsed.cases)||!parsed.cases.length||parsed.cases.some(c=>!Array.isArray(c.answers)||c.answers.length!==3))throw Error('记录格式错误');
+  data=parsed;byId('rater').value=data.rater||'';byId('case').replaceChildren();
+  data.cases.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=c.case_id;byId('case').append(o);});
+  byId('download').disabled=false;show();progress();
+ }catch(e){byId('progress').textContent='无法加载：'+e.message;}
+};
+byId('case').onchange=show;
+byId('rater').oninput=()=>{if(data)data.rater=byId('rater').value;};
+byId('download').onclick=()=>{
+ const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+ const a=document.createElement('a');a.href=url;a.download='ratings.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),500);
+};
+</script>
+</html>
