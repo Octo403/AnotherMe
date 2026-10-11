@@ -22,7 +22,7 @@ function modelOptions(mode,selected=''){
 async function loadModelCatalog(mode){
  // Reading the CLI directory needs neither API settings nor other secrets.
  const form=mode==='api'?modelSettingsPayload():null;
- const payload=mode==='api'?{search_mode:mode,api:form.api,clear_api_key:form.clear_api_key}:{search_mode:mode};
+ const payload=mode==='api'?{search_mode:mode,api:form.api,clear_api_key:form.clear_api_key}:{search_mode:mode,codex_path:$('codex-cli-path').value.trim()};
  return modelSettingsJob('/api/model-catalog',payload);
 }
 function renderQuestionModelBadge(){
@@ -38,6 +38,7 @@ function modelSettingsPayload(){return {
   api_key:$('model-api-key').value.trim(),temperature:Number($('model-temperature').value),max_tokens:Number($('model-max-tokens').value),
   response_format:$('model-response-format').value,images:$('model-images').checked},
  codex_model:$('codex-model-id').value.trim(),codex_images:$('codex-model-images').checked,
+ codex_path:$('codex-cli-path').value.trim(),
  extractor:$('pdf-extractor').value,mineru_model:$('mineru-model').value,mineru_token:$('mineru-token').value.trim(),
  remember_keys:$('remember-model-keys').checked,clear_api_key:$('clear-api-key').checked,clear_mineru_token:$('clear-mineru-token').checked
 };}
@@ -58,6 +59,7 @@ function renderModelSettings(data){
  $('model-key-state').textContent=data.api.has_key?'已有 Key，留空保留；更换服务商或地址需重新填写。':'未设置 Key';
  $('mineru-token-state').textContent=data.mineru_has_token?'已有 Token，留空保留。':'未设置 Token';
  modelOptions('codex_chatgpt',data.codex_model);$('codex-model-images').checked=data.codex_images;
+ $('codex-cli-path').value=data.codex_path||'';
  $('pdf-extractor').value=data.extractor;$('mineru-model').value=data.mineru_model;
  $('remember-model-keys').checked=data.remember_keys;
  const sources=$('mineru-sample-source');sources.replaceChildren();
@@ -116,6 +118,7 @@ $('model-provider').onchange=()=>{
  $('model-key-state').textContent='已切换服务商，请填写对应的 Key，再读取型号。';
 };
 $('model-base-url').onchange=()=>{modelCatalogs.api=null;modelOptions('api');};
+$('codex-cli-path').onchange=()=>{modelCatalogs.codex_chatgpt=null;modelOptions('codex_chatgpt',$('codex-model-id').value);$('codex-catalog-status').textContent='路径已更改，请刷新型号并保存设置。';};
 $('save-model-settings').onclick=()=>modelSettingsJob('/api/model-settings',modelSettingsPayload());
 $('test-model').onclick=()=>modelSettingsJob('/api/model-test',modelSettingsPayload());
 $('load-models').onclick=()=>loadModelCatalog('api');

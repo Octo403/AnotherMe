@@ -2,7 +2,11 @@
 
 基于 **LangGraph 单 Agent** 的本地中文对话与课程资料助手。输入课程名、导入文件或添加公开网址，即可收集资料、查看处理进度、按问题检索题目，并用自己配置的模型完成第二轮筛选。原始文件、题目出处、处理结果与会话保存在本机。
 
-**[下载 Windows 便携体验版](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.1/AnotherMe-Portable-Windows-x64.zip)** · [版本说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.1) · [详细使用与构建说明](docs/PORTABLE.md)
+**[下载 Windows 便携体验版](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-Portable-Windows-x64.zip)** · [版本说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.2) · [详细使用与构建说明](docs/PORTABLE.md)
+
+已下载 preview.1：可用 [约 290 KB 升级补丁](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-preview1-to-preview2-patch.zip)，停止服务及后台任务后复制到原目录覆盖，保留 `user-data`。本次修复 Codex 路径检测、课程目录错误提示，并增加启动日志。
+
+已下载 preview.1：可用 [约 290 KB 升级补丁](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-preview1-to-preview2-patch.zip)，停止服务及后台任务后复制到原目录覆盖，保留 `user-data`。本次修复 Codex 路径检测、课程目录错误提示，并增加启动日志。
 
 ![课程资料与补充资料入口，界面内人物资料均为虚构](docs/images/portable-materials.png)
 

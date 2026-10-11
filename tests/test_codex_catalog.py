@@ -100,3 +100,26 @@ def test_ui_catalog_routes_chatgpt_without_needing_api_key(tmp_path, monkeypatch
         assert service.pool.submit(lambda: service.agent.question_bank.config.similar_model).result() == 'account-model'
     finally:
         service.close()
+
+
+def test_manual_cli_path_catalog_and_settings_survive_restart(tmp_path, monkeypatch):
+    expected = {'models': ['account-model']}
+    path = str(tmp_path/'custom tools/codex.exe')
+    seen = []
+    def catalog(*, cli_path):
+        seen.append(cli_path)
+        return expected
+    monkeypatch.setattr(codex_catalog, 'codex_model_catalog', catalog)
+    config = settings_for_ui(Settings(question_bank_dir=tmp_path/'bank'), tmp_path/'data')
+    for restarting in (False, True):
+        service = UIService(config, tmp_path/'ui.sqlite3')
+        try:
+            if not restarting:
+                payload = {'search_mode': 'codex_chatgpt', 'codex_path': path, 'codex_model': 'account-model'}
+                assert service.call('_model_catalog', payload) == expected
+                service.call('_save_model_settings', payload)
+            assert service.call('_model_settings')['codex_path'] == path
+            assert service.pool.submit(lambda: service.agent.question_bank.config.codex_path).result() == path
+        finally:
+            service.close()
+    assert seen == [path]

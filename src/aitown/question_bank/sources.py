@@ -1,13 +1,55 @@
 """GitHub tree discovery and bounded, atomic downloads. No attachment execution."""
 import base64
+import json
 import re
 import time
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 import httpx
 
 from .models import COURSE_ID, COURSE_NAME, BankConfig, Source
+
+
+def github_request_error(exc):
+    """Explain failures without echoing proxy pages, URLs or credentials."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        response = exc.response
+        status = response.status_code
+        limited = status == 429 or (status == 403 and response.headers.get('x-ratelimit-remaining') == '0')
+        if status == 403 and not limited:
+            try:
+                limited = 'rate limit' in str(response.json().get('message', '')).lower()
+            except (ValueError, AttributeError):
+                pass
+        if limited:
+            wait = '请至少等一分钟后再试，避免连续刷新。'
+            try:
+                seconds = int(response.headers.get('retry-after', ''))
+                if seconds > 0:
+                    wait = f'请等待 {seconds} 秒后再试，避免连续刷新。'
+            except ValueError:
+                try:
+                    reset = float(response.headers.get('x-ratelimit-reset', ''))
+                    wait = '请在本机时间 '+datetime.fromtimestamp(reset).strftime('%Y-%m-%d %H:%M:%S')+' 后再试。'
+                except (ValueError, OSError, OverflowError):
+                    pass
+            return f'GitHub 请求被限流（HTTP {status}）。{wait}同一网络出口的其他用户也可能共用额度。'
+        if status == 404:
+            detail = '公开资料仓库或分支未找到；请检查仓库地址，稍后重试。'
+        elif status == 407:
+            detail = '网络代理要求认证；请检查 Windows 或环境变量中的代理配置。'
+        elif status in (401, 403):
+            detail = '请求被拒绝；请检查当前网络、代理和仓库访问权限。'
+        elif status >= 500:
+            detail = '上游服务暂时异常；请稍后重试，并检查当前网络或代理。'
+        else:
+            detail = '请检查当前网络或代理后重试。'
+        return f'GitHub 请求失败（HTTP {status}）。'+detail
+    if isinstance(exc, httpx.TimeoutException):
+        return '连接 GitHub 超时，请检查能否访问 api.github.com，以及当前网络或代理配置。'
+    return '无法连接 GitHub，请检查能否访问 api.github.com，以及当前网络、代理或证书配置。'
 
 
 def hints(path):
@@ -35,26 +77,44 @@ class GithubSource:
                 response.raise_for_status()
                 return response
             except (httpx.TransportError, httpx.HTTPStatusError) as exc:
-                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code < 500 and exc.response.status_code != 429:
-                    raise
+                # Rate limits can last minutes or an hour. Immediate retries
+                # consume quota and must not hide the server's retry guidance.
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code < 500:
+                    raise ValueError(github_request_error(exc)) from None
                 if attempt == 2:
-                    raise
+                    raise ValueError(github_request_error(exc)) from None
                 time.sleep(.5 * (attempt + 1))
+
+    def json(self, url, **kwargs):
+        response = self.request(url, **kwargs)
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            raise ValueError('GitHub 返回的内容不是有效目录 JSON；请检查网络或代理是否拦截了 api.github.com。') from None
+        if not isinstance(data, dict):
+            raise ValueError('GitHub 目录格式异常，本次未更新本地资料。')
+        return data
 
     def discover(self):
         repo = self.config.repository
-        info = self.request('https://api.github.com/repos/'+repo).json()
-        branch = info['default_branch']
+        info = self.json('https://api.github.com/repos/'+repo)
+        branch = info.get('default_branch')
+        if not isinstance(branch, str) or not branch:
+            raise ValueError('GitHub 未返回公开资料仓库的默认分支，本次未更新本地资料。')
         url = f'https://api.github.com/repos/{repo}/git/trees/{quote(branch, safe="")}'
-        tree = self.request(url, params={'recursive': '1'}).json()
-        entries = tree['tree']
+        tree = self.json(url, params={'recursive': '1'})
+        entries = tree.get('tree')
+        if not isinstance(entries, list):
+            raise ValueError('GitHub 未返回完整目录，本次未更新本地资料。')
         if tree.get('truncated'):
             # Nonrecursive tree endpoints are complete; traverse only resource directories.
             entries = []
             def walk(ref, prefix=''):
-                data = self.request(f'https://api.github.com/repos/{repo}/git/trees/{ref}').json()
+                data = self.json(f'https://api.github.com/repos/{repo}/git/trees/{ref}')
                 if data.get('truncated'):
                     raise ValueError('非递归目录也被截断，不能声明资料清点完整')
+                if not isinstance(data.get('tree'), list):
+                    raise ValueError('GitHub 未返回完整子目录，本次未更新本地资料。')
                 for item in data['tree']:
                     path = prefix + item['path']
                     entries.append({**item, 'path': path})

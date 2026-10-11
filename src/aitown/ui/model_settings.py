@@ -15,6 +15,7 @@ class ModelPreferences(BaseModel):
     api: ProviderConfig = Field(default_factory=ProviderConfig)
     codex_model: str = Field(default='', max_length=200)
     codex_images: bool = True
+    codex_path: str = Field(default='', max_length=4096)
     extractor: Literal['basic', 'mineru', 'mineru_api'] = 'basic'
     mineru_model: Literal['vlm', 'pipeline'] = 'vlm'
     mineru_token: str = Field(default='', repr=False, exclude=True, max_length=8192)

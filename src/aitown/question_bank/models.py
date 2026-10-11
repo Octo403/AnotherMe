@@ -21,6 +21,7 @@ class BankConfig(BaseModel):
     api: ProviderConfig = Field(default_factory=ProviderConfig)
     similar_model: str = ''
     similar_images: bool = True
+    codex_path: str = Field(default='', max_length=4096)
     extractor: Literal['basic','mineru','mineru_api'] = 'basic'
     mineru_api_key: str = Field(default='', repr=False, exclude=True)
     mineru_api_model: Literal['pipeline','vlm'] = 'vlm'

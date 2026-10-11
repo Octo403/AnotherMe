@@ -9,9 +9,6 @@ import traceback
 import webbrowser
 from pathlib import Path
 
-import httpx
-
-
 def configure_environment(home):
     # A downloaded copy must not pick up the developer's corpus or model paths.
     for key in list(os.environ):
@@ -29,6 +26,7 @@ def configure_environment(home):
 
 
 def running_instance(home):
+    import httpx
     try:
         record = json.loads((home/'user-data/desktop.json').read_text(encoding='utf-8'))
         port = int(record['port'])
@@ -46,13 +44,30 @@ def running_instance(home):
     return None
 
 
-def run(home, *, port=8501, open_browser=True, stop=False):
+def open_browser_page(url):
+    try:
+        opened = webbrowser.open(url)
+    except Exception:
+        opened = False
+    if not opened:
+        print('未能自动打开浏览器。服务仍可使用，请手动打开：'+url, flush=True)
+    return opened
+
+
+def run(home, *, port=8501, open_browser=True, stop=False, progress=None):
+    def report(message, *, ready=False):
+        if progress:
+            progress(message, ready=ready)
+        else:
+            print(message, flush=True)
     home = Path(home).resolve()
+    report('[3/5] 检查本地资料目录与已有服务……')
     directory = home/'user-data'
     directory.mkdir(parents=True, exist_ok=True)
     existing = running_instance(home)
     if stop:
         if existing:
+            import httpx
             with httpx.Client(trust_env=False, timeout=5) as client:
                 client.post(existing+'/api/desktop-stop', json={}).raise_for_status()
             print('AnotherMe 已收到停止请求。', flush=True)
@@ -60,9 +75,9 @@ def run(home, *, port=8501, open_browser=True, stop=False):
             print('当前体验包没有正在运行的服务。', flush=True)
         return
     if existing:
+        report('AnotherMe 已在运行：'+existing, ready=True)
         if open_browser:
-            webbrowser.open(existing)
-        print('已打开正在运行的 AnotherMe：'+existing, flush=True)
+            open_browser_page(existing)
         return
     # A normal SQLite write transaction prevents simultaneous double clicks from
     # creating two services for the same data directory. It is not an app DB lock.
@@ -74,16 +89,19 @@ def run(home, *, port=8501, open_browser=True, stop=False):
             for _ in range(100):
                 existing = running_instance(home)
                 if existing:
+                    report('AnotherMe 已在运行：'+existing, ready=True)
                     if open_browser:
-                        webbrowser.open(existing)
+                        open_browser_page(existing)
                     return
                 time.sleep(.2)
             raise RuntimeError('另一个启动进程正在初始化。请稍候再双击启动。') from None
         configure_environment(home)
+        report('[4/5] 加载界面与计算依赖，首次启动可能需要稍等……')
         from .config import Settings
         from .ui.demo import settings_for_ui
         from .ui.server import make_server
         from .ui.service import UIService
+        report('[5/5] 初始化本地数据库并启动网页服务……')
         installed = Settings(question_bank_dir=directory/'question_bank')
         settings = settings_for_ui(installed, directory/'application')
         service = UIService(settings, directory/'application/ui.sqlite3')
@@ -101,12 +119,14 @@ def run(home, *, port=8501, open_browser=True, stop=False):
             record = {'port':server.server_port, 'pid':os.getpid()}
             (directory/'desktop.json').write_text(json.dumps(record), encoding='utf-8')
             url = f'http://127.0.0.1:{server.server_port}'
-            print('AnotherMe 已启动：'+url+'\n资料保存位置：'+str(directory)+
-                '\n请保留此窗口；关闭窗口或双击 Stop.bat 可停止界面。', flush=True)
+            report('AnotherMe 已启动：'+url+'\n资料保存位置：'+str(directory)+
+                '\n请保留此窗口；关闭窗口或双击 Stop.bat 可停止界面。', ready=True)
             # The listening socket is already bound; the request waits until the
             # loop below begins. First-run guidance is decided by saved settings.
             if open_browser:
-                webbrowser.open(url)
+                # A stalled Windows browser association must not block serving.
+                import threading
+                threading.Thread(target=open_browser_page,args=(url,),daemon=True).start()
             try:
                 server.serve_forever(poll_interval=.2)
             except KeyboardInterrupt:
@@ -119,7 +139,7 @@ def run(home, *, port=8501, open_browser=True, stop=False):
         owner.close()
 
 
-def main():
+def main(*, progress=None):
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description='AnotherMe Windows 本地体验版')
@@ -131,8 +151,12 @@ def main():
     if not 0 <= args.port <= 65535:
         parser.error('端口须在 0–65535 之间')
     try:
-        run(args.home, port=args.port, open_browser=not args.no_browser, stop=args.stop)
+        run(args.home, port=args.port, open_browser=not args.no_browser, stop=args.stop, progress=progress)
     except Exception:
+        if progress:
+            # The standard-library bootstrap owns diagnostics, including errors
+            # before imports and when this directory cannot hold a log.
+            raise
         log = args.home.resolve()/'user-data/startup-error.log'
         try:
             log.parent.mkdir(parents=True, exist_ok=True)

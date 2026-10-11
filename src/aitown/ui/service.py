@@ -71,6 +71,7 @@ class UIService:
         self.model_preferences=ModelPreferences(search_mode=self.settings.question_similar_provider,
             api=self.settings.question_api,codex_model=self.settings.question_similar_model,
             codex_images=self.settings.question_similar_images,extractor=self.settings.question_extractor,
+            codex_path=self.settings.question_codex_path,
             mineru_model=self.settings.mineru_api_model,mineru_token=self.settings.mineru_api_key)
         self.model_settings_warning=''
         saved=self.meta.execute("SELECT value FROM ui_settings WHERE key='model_preferences'").fetchone()
@@ -165,6 +166,7 @@ class UIService:
         self.settings=self.settings.model_copy(update={
             'question_similar_provider':preferences.search_mode,'question_api':preferences.api,
             'question_similar_model':preferences.codex_model,'question_similar_images':preferences.codex_images,
+            'question_codex_path':preferences.codex_path,
             'question_extractor':preferences.extractor,'mineru_api_key':preferences.mineru_token,
             'mineru_api_model':preferences.mineru_model})
         if hasattr(self,'agent'):
@@ -172,6 +174,7 @@ class UIService:
             self.agent.question_bank.config=self.agent.question_bank.config.model_copy(update={
                 'similar_provider':preferences.search_mode,'api':preferences.api,
                 'similar_model':preferences.codex_model,'similar_images':preferences.codex_images,
+                'codex_path':preferences.codex_path,
                 'extractor':preferences.extractor,'mineru_api_key':preferences.mineru_token,
                 'mineru_api_model':preferences.mineru_model})
             self.agent.question_bank.similarity=None
@@ -233,7 +236,7 @@ class UIService:
         candidate=self._resolve_model_settings(payload)
         if candidate.search_mode=='codex_chatgpt':
             from ..question_bank.codex_catalog import codex_model_catalog
-            return codex_model_catalog()
+            return codex_model_catalog(cli_path=candidate.codex_path) if candidate.codex_path else codex_model_catalog()
         return api_operation(candidate.api,'models')
 
     def _mineru_sample(self,payload):
@@ -387,6 +390,8 @@ class UIService:
         remote=GithubSource(self.agent.question_bank.config)
         try:
             courses,sources=remote.discover()
+        except ValueError as exc:
+            raise UIError(str(exc)+' 原有课程目录和已收集资料均已保留；仍可上传文件或添加网址。') from None
         finally:
             remote.close()
         with BankRepository(self.agent.question_bank.config.database) as repo:

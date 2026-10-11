@@ -146,7 +146,8 @@ class QuestionBank:
                 try:
                     from .chatgpt import ChatGPTSimilarity
                     self.similarity=self.similarity or ChatGPTSimilarity(model=self.config.similar_model,
-                        image_root=self.config.root/'processed',use_images=self.config.similar_images)
+                        image_root=self.config.root/'processed',use_images=self.config.similar_images,
+                        cli_path=self.config.codex_path)
                     # Exact course/year/type filters still apply. Let the model
                     # check plausible candidates even when OCR misses keywords.
                     pool=list(dict.fromkeys([*hits,*order]))[:20]

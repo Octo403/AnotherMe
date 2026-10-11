@@ -96,9 +96,9 @@ class _CatalogRPC:
         self.process.stdout.close()
 
 
-def codex_model_catalog(timeout=25):
+def codex_model_catalog(timeout=25, *, cli_path=''):
     """Use managed ChatGPT login, never inspect or return account credentials."""
-    command = codex_command()
+    command = codex_command(cli_path) if cli_path else codex_command()
     env = {k: v for k, v in os.environ.items() if k not in ('OPENAI_API_KEY', 'CODEX_API_KEY')}
     try:
         with tempfile.TemporaryDirectory(prefix='anotherme-model-catalog-') as directory:

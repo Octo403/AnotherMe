@@ -55,6 +55,7 @@ class Settings(BaseModel):
     question_ocr_columns: int = Field(default=1, ge=1, le=2)
     question_similar_model: str = ''
     question_similar_images: bool = True
+    question_codex_path: str = Field(default='', max_length=4096)
     llm_response_format: Literal['json_schema', 'json_object', 'plain_json'] = 'json_object'
 
     @model_validator(mode="after")
@@ -129,5 +130,6 @@ class Settings(BaseModel):
             question_ocr_columns=os.getenv('QUESTION_OCR_COLUMNS', '1'),
             question_similar_model=os.getenv('QUESTION_SIMILAR_MODEL', ''),
             question_similar_images=os.getenv('QUESTION_SIMILAR_IMAGES', 'true'),
+            question_codex_path=os.getenv('AITOWN_CODEX_PATH', ''),
             llm_response_format=os.getenv('LLM_RESPONSE_FORMAT', 'json_object'),
         )

@@ -48,6 +48,7 @@ class AnotherMeAgent:
             embedding_dir=settings.local_embedding_dir,reranker_dir=settings.local_reranker_dir,
             similar_provider=settings.question_similar_provider,similar_model=settings.question_similar_model,
             similar_images=settings.question_similar_images,api=settings.question_api,
+            codex_path=settings.question_codex_path,
             extractor=settings.question_extractor,mineru_api_key=settings.mineru_api_key,
             mineru_api_model=settings.mineru_api_model,mineru_python=settings.mineru_python,
             mineru_tier=settings.mineru_tier,pdf_ocr=settings.question_pdf_ocr,

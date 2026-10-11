@@ -18,6 +18,31 @@ from pathlib import Path
 PROJECT = Path(__file__).resolve().parents[1]
 
 
+def write_launchers(output):
+    output = Path(output)
+    shutil.copy2(PROJECT/'scripts/portable_launcher.py', output/'launcher.py')
+    for name, arguments in [('Start.bat',''),('Stop.bat','--stop'),('Diagnose.bat','--diagnose')]:
+        script = ('@echo off\r\nsetlocal DisableDelayedExpansion\r\n'
+            'echo [AnotherMe] Preparing the bundled runtime...\r\n'
+            'chcp 65001 >nul\r\n'
+            'if not exist "%~dp0runtime\\python.exe" goto missing\r\n'
+            'if not exist "%~dp0launcher.py" goto missing\r\n'
+            'echo [1/5] Starting Python. Please keep this window open.\r\n'
+            '"%~dp0runtime\\python.exe" -I -X utf8 -u "%~dp0launcher.py" --home "%~dp0." '+arguments+' %*\r\n'
+            'set "launchExit=%ERRORLEVEL%"\r\n'
+            'if not "%launchExit%"=="0" (\r\n'
+            '  echo [AnotherMe] Startup failed. Exit code: %launchExit%\r\n'
+            '  echo Check user-data\\startup.log and user-data\\startup-error.log.\r\n'
+            '  pause\r\n'
+            ')\r\n'+('if "%launchExit%"=="0" pause\r\n' if name=='Diagnose.bat' else '')+
+            'exit /b %launchExit%\r\n'
+            ':missing\r\n'
+            'echo [AnotherMe] Runtime files are missing. Fully extract the portable ZIP first.\r\n'
+            'echo Do not run Start.bat from inside the ZIP or the Source code download.\r\n'
+            'pause\r\nexit /b 1\r\n')
+        (output/name).write_bytes(script.encode('ascii'))
+
+
 def archive_bundle(output, archive=None):
     output = Path(output).resolve()
     archive = Path(archive).resolve() if archive else output.parent/(output.name+'.zip')
@@ -71,10 +96,7 @@ def build(output, python_home, libreoffice, sevenzip=None):
         for name in ('7z.exe', '7z.dll', '7-zip.dll', 'License.txt', 'license.txt', 'readme.txt'):
             if (sevenzip/name).is_file() and not (target/name).exists():
                 shutil.copy2(sevenzip/name, target/name)
-    for name, arguments in [('Start.bat', ''), ('Stop.bat', '--stop')]:
-        (output/name).write_bytes(('@echo off\r\nchcp 65001 >nul\r\n'
-            '"%~dp0runtime\\python.exe" -I -m aitown.portable --home "%~dp0." '+arguments+' %*\r\n'
-            'if errorlevel 1 pause\r\n').encode('ascii'))
+    write_launchers(output)
     shutil.copy2(PROJECT/'docs/PORTABLE_QUICKSTART.txt', output/'使用说明.txt')
     (output/'示例资料').mkdir()
     shutil.copy2(PROJECT/'examples/portable/示例课程-期末试题.md', output/'示例资料/示例课程-期末试题.md')

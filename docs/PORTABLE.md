@@ -1,6 +1,8 @@
 # Windows 下载体验版
 
-[下载便携 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.1/AnotherMe-Portable-Windows-x64.zip) · [预览版说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.1)
+[下载便携 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-Portable-Windows-x64.zip) · [预览版说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.2)
+
+已下载 preview.1 的用户可用 [小补丁 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-preview1-to-preview2-patch.zip)：先停止界面并等待后台资料处理结束，把补丁内文件复制到原解压目录，覆盖同名文件，再双击 `Start.bat`。补丁不含 `user-data`；保留原来的资料目录。
 
 面向 Windows 10/11 x64 的本地 ZIP。解压后双击 `Start.bat`，程序自带独立 Python、所需 Python 依赖和 LibreOffice 文档转换器，自动打开本机浏览器。重复双击复用同目录的现有服务；端口占用时尝试其他端口。`Stop.bat` 只停止对应解压副本的界面，后台资料任务按既有持久化机制继续或恢复。无需安装 Docker、系统 Python、Word 或 Codex CLI。
 
@@ -12,6 +14,8 @@
 解压目录/
   Start.bat
   Stop.bat
+  Diagnose.bat              仅检查运行环境依赖
+  launcher.py               启动与诊断入口
   使用说明.txt
   示例资料/                 原创虚构试题，用于首次体验
   runtime/                  独立 Python 与依赖
@@ -20,11 +24,29 @@
     question_bank/          原件、处理结果、题库数据库
     application/            会话、偏好和独立合成资料
     desktop.json            当前副本的端口信息
+    startup.log             启动阶段与长时间等待的线程位置
+    startup-error.log       启动异常（发生异常时生成）
 ```
 
 发布包按明确目录构建，仅包含应用、运行环境、转换器、说明和原创示例；不复制项目 `.env`、现有 `data/`、微信资料、模型权重或个人凭证。启动入口直接创建独立设置，不加载开发目录 `.env`；后台 worker 使用同一个包内 Python。
 
 备份应在停止服务且后台处理完成后复制整个 `user-data`。更新时解压新包，再复制旧 `user-data`；不要覆盖为新的空目录。密钥与 Windows 账户绑定，不能把开发者的加密偏好当成可分发凭证。
+
+启动窗口会立即显示阶段。网页未自动打开时，复制窗口里的 `http://127.0.0.1:端口` 到浏览器。启动卡住时查看 `user-data/startup.log`，也可双击 `Diagnose.bat` 检查依赖；此诊断不启动服务、不读取课程资料。解压目录不可写时，诊断日志退回 Windows 临时目录，实际路径会显示在窗口中。
+
+ChatGPT 模式提示找不到 CLI 时，先在朋友电脑上新开一个 **Windows PowerShell**：
+
+```powershell
+where.exe codex
+codex --version
+codex login status
+```
+
+修复版会读取更新后的 Windows PATH，并检查常见安装目录。若仍找不到，在“设置 → ChatGPT 登录 → Codex CLI 路径”粘贴 `where.exe codex` 返回的完整路径（如 `C:\Users\用户名\AppData\Roaming\npm\codex.cmd`），点击“刷新可用型号”再保存。这个路径同时用于型号读取与第二轮筛题，重启后保留。可选环境变量为 `AITOWN_CODEX_PATH`。CLI 必须能在当前 Windows 账户中运行并登录；仅在 WSL、编辑器插件或其他 Windows 账户里登录不足以供当前便携版使用。不要复制或上传登录凭证文件。
+
+`codex login status` 用于查看当前认证状态，参见 [OpenAI 官方认证说明](https://learn.chatgpt.com/docs/auth)。
+
+“刷新全部课程目录”需要访问 GitHub。失败时现在会显示具体 HTTP 状态码或连接原因，保留原目录和已收集资料：403 / 429 可能是限流，按提示的时间重试；其他 403 表示访问被拒绝，407 表示代理要求认证，404 表示仓库或分支未找到。不要连续点击刷新。公开接口的匿名额度与网络出口相关，参见 [GitHub 官方排错说明](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api)。无法联网刷新时，仍可使用已有题库或上传本地文件；添加网址仍需网络。
 
 文档处理支持 PDF、DOC、DOCX、MD、TXT、HTML 与 ZIP；若构建时带入 7-Zip，则还支持 RAR / 7z。DOC / DOCX 使用包内 LibreOffice，独立临时配置禁止宏。转换在短临时目录完成，校验生成 PDF 后复制回资料库，避免解压路径较长导致转换器失败；原件始终保留。转换后字体、公式和分页可能与 Word 不同，仍需对照原件。DOCX 转换失败时保留可读文字、公式、附图与处理提示。扫描 PDF、旧式嵌入公式、混排答案等仍按原有缺失和待审校规则处理，不把未识别内容当作完整题目。
 

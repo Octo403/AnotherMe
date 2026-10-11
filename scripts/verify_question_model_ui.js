@@ -80,7 +80,7 @@ async function main(){
  checks.provider_change_clears_catalog_and_key=true;
  controls.get('question-model-mode').value='codex_chatgpt';await controls.get('question-model-mode').onchange();
  const codexRead=requests.find(item=>item.path==='/api/model-catalog'&&item.payload.search_mode==='codex_chatgpt');
- assert.deepEqual(Object.keys(codexRead.payload),['search_mode']);
+ assert.deepEqual(Object.keys(codexRead.payload),['search_mode','codex_path']);
  assert.equal(controls.get('codex-model-fields').hidden,false);
  assert.equal(controls.get('codex-model-id').value,'account-default');
  assert(controls.get('codex-model-id').options[1].textContent.includes('默认推荐'));
@@ -88,6 +88,14 @@ async function main(){
  assert.equal(saved.codex_model,'account-alternative');
  await sandbox.refreshModelSettings();assert.equal(controls.get('codex-model-id').value,'account-alternative');
  checks.codex_auto_load_default_and_persist_exact_selection=true;
+ controls.get('codex-cli-path').value='C:\\Custom Tools\\codex.cmd';controls.get('codex-cli-path').onchange();
+ await controls.get('load-codex-models').onclick();
+ assert.equal(requests.at(-1).payload.codex_path,'C:\\Custom Tools\\codex.cmd');
+ assert(!('api' in requests.at(-1).payload));
+ await controls.get('save-model-settings').onclick();await sandbox.refreshModelSettings();
+ assert.equal(saved.codex_path,'C:\\Custom Tools\\codex.cmd');
+ assert.equal(controls.get('codex-cli-path').value,saved.codex_path);
+ checks.manual_codex_path_load_save_and_reload=true;
  failNext=true;await controls.get('load-codex-models').onclick();
  assert.equal(state.busy,false);assert.equal(controls.get('codex-model-id').value,'account-alternative');
  assert(controls.get('codex-catalog-status').textContent.includes('模拟连接失败'));
