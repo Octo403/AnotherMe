@@ -39,4 +39,9 @@ build/
 WechatExport*/
 data/private/
 data/processed/wechat*/
+# Private snapshots produced by the optional WeChat exporter.
+chat_full_parsed.json
+chat_full_for_llm.txt
+chat_full_for_llm.md
+wechat-sync-temp/
 data/evaluation/t12/**/runtime/

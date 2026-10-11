@@ -34,6 +34,7 @@ def make_server(service,port=8501,*,desktop=None):
                 assets={'/':('index.html','text/html; charset=utf-8'),'/app.js':('app.js','text/javascript; charset=utf-8'),'/models.js':('models.js','text/javascript; charset=utf-8'),'/question-scope.js':('question_scope.js','text/javascript; charset=utf-8'),'/courses.js':('course_prepare.js','text/javascript; charset=utf-8'),'/style.css':('style.css','text/css; charset=utf-8')}
                 assets['/question-text.js']=('question_text.js','text/javascript; charset=utf-8')
                 assets['/setup.js']=('setup.js','text/javascript; charset=utf-8')
+                assets['/wechat-sync.js']=('wechat_sync.js','text/javascript; charset=utf-8')
                 if parsed.path in assets:
                     name,mime=assets[parsed.path];self.send(200,(Path(__file__).parent/'static'/name).read_bytes(),mime);return
                 if parsed.path=='/api/job':result=service.job(query.get('id',[''])[0])
@@ -50,6 +51,9 @@ def make_server(service,port=8501,*,desktop=None):
                     body,mime,name=service.call('_course_source',query.get('course',[''])[0],int(query.get('source',['0'])[0]))
                     self.send(200,body,mime,filename=name,attachment=mime!='application/pdf');return
                 elif parsed.path=='/api/bootstrap':result=service.call('_bootstrap')
+                elif parsed.path=='/api/wechat-sync':result=service.wechat_sync.status()
+                elif parsed.path=='/api/wechat-preview':result=service.wechat_sync.preview(query.get('id',['0'])[0])
+                elif parsed.path=='/api/wechat-library':result=service.wechat_sync.library(query.get('id',['0'])[0],query.get('offset',['0'])[0])
                 elif parsed.path=='/api/model-settings':result=service.call('_model_settings')
                 elif parsed.path=='/api/local-model-settings':result=service.call('_local_model_settings')
                 elif parsed.path=='/api/history':result=service.call('_history',query.get('session',[''])[0])
@@ -86,6 +90,7 @@ def make_server(service,port=8501,*,desktop=None):
             if not isinstance(payload,dict):raise UIError('请求须为 JSON 对象。')
             routes={'/api/chat':('_chat',payload),'/api/resume':('_resume',payload.get('session','')),
                 '/api/correct':('_correct',payload),'/api/import':('_import',payload),
+                '/api/wechat-review':('_review_wechat',payload),
                 '/api/delete-document':('_delete_document',payload.get('id',0)),'/api/refresh':('_refresh',),
                 '/api/mode':('_mode',payload.get('mode')),
                 '/api/model-settings':('_save_model_settings',payload),
@@ -101,6 +106,10 @@ def make_server(service,port=8501,*,desktop=None):
                 self.send(200,{'stopping':True})
                 threading.Thread(target=self.server.shutdown,daemon=True).start();return
             if parsed.path in routes:result=service.start_job(*routes[parsed.path])
+            elif parsed.path=='/api/wechat-source':result=service.wechat_sync.save(payload)
+            elif parsed.path=='/api/wechat-start':result=service.wechat_sync.start(payload.get('id',0),payload.get('repeat',False))
+            elif parsed.path=='/api/wechat-stop':result=service.wechat_sync.stop(payload.get('id',0))
+            elif parsed.path=='/api/wechat-delete':result=service.wechat_sync.delete(payload.get('id',0))
             elif parsed.path=='/api/setup-complete':result=service.call('_setup_complete')
             elif parsed.path=='/api/session':result=service.call('_create_session',payload)
             elif parsed.path=='/api/question-scope':result=service.call('_question_scope',payload)

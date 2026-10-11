@@ -1,5 +1,6 @@
 import json
 import time
+from contextlib import nullcontext
 from pathlib import Path
 
 from .models import Memory
@@ -10,7 +11,7 @@ class MemoryStore:
         self.repo = repository
         self.conn = repository.conn
 
-    def save(self, entries, reviews=None):
+    def save(self, entries, reviews=None, *, within_transaction=False):
         """Review records retain the interpreted fields, so stale approvals fail.
 
         This is dataset review, not authorization to send private data anywhere.
@@ -18,7 +19,9 @@ class MemoryStore:
         """
         reviews = reviews or {}
         added = 0
-        with self.conn:
+        if within_transaction and not self.conn.in_transaction:
+            raise ValueError('Caller must own the source-review transaction')
+        with nullcontext() if within_transaction else self.conn:
             for draft in entries:
                 memory = draft.model_copy(deep=True)
                 ids = self.repo._source_ids([e.message_id for e in memory.evidence])

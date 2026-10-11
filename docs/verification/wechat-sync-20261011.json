@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-11",
+  "release": "v0.1.0-preview.4",
+  "regression": {"passed": 377, "seconds": 55.11},
+  "final_transaction_change": {"focused_tests_passed": 31, "seconds": 3.61},
+  "upstream_format": {
+    "version": "1.3.5",
+    "producer": "upstream export_chat production function",
+    "database": "fictional FakeDB using real SQLite shards",
+    "exported_messages": 3,
+    "reviewed_messages": 2,
+    "unknown_sender_skipped": 1,
+    "real_wechat_capture_verified": false
+  },
+  "portable_upgrade": {
+    "input": "actual preview3 ZIP plus preview4 patch",
+    "seconds": 47.9,
+    "system_only_path": true,
+    "chinese_directory": true,
+    "existing_documents_and_sessions_preserved": true,
+    "encrypted_credentials_preserved": true,
+    "reviewed_wechat_preserved_after_restart": true
+  },
+  "browser": {
+    "engine": "Edge",
+    "viewport_widths": [1440, 390],
+    "no_horizontal_overflow": true,
+    "no_javascript_errors": true,
+    "source_configuration_sync_review_and_scope_selection": true,
+    "local_qwen_generated_answer_with_sources": true,
+    "reload_preserved": true
+  },
+  "limitations": [
+    "Real WeChat collection still requires testing a user-selected conversation and a supported logged-in Windows WeChat installation.",
+    "Exporter is optional and external; automatic collection requires its own Python dependencies.",
+    "Synchronization polls complete snapshots rather than receiving live message pushes.",
+    "Only identified plain text is collected; interpreted self memories require separate confirmation.",
+    "No automatic style-profile training; redaction does not guarantee complete anonymization."
+  ]
+}

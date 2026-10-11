@@ -21,7 +21,11 @@ LABELS = {"id_card": "身份证号", "phone": "手机号", "landline": "电话�
 
 
 def initials(name: str) -> str:
-    from pypinyin import Style, lazy_pinyin
+    try:
+        from pypinyin import Style, lazy_pinyin
+    except ImportError:
+        # The portable runtime need not ship the optional pinyin dependency.
+        return '姓名'
     return "".join(lazy_pinyin(name, style=Style.FIRST_LETTER)).lower()
 
 
@@ -116,7 +120,7 @@ class Redactor:
             counts[category] += count
         text, aliases = self.aliases.replace(text)
         counts.update(aliases)
-        text = re.sub(r"(?:我叫|姓名[:：]?|联系人[:：]?|收件人[:：]?)\s*([\u4e00-\u9fff]{2,4})(?=$|[\s，。；！？])",
+        text = re.sub(r"(?:我叫|姓名[:：]?|联系人[:：]?|收件人[:：]?)\s*([\u4e00-\u9fff]{2,4})(?=$|[\s,，。;；!！?？])",
                       lambda m: m[0].replace(m[1], initials(m[1])), text)
         return text.strip(), +counts
 

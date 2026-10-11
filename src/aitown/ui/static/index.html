@@ -121,6 +121,25 @@
   </section>
   </div>
   <div id="personal-library-view" hidden>
+  <section id="wechat-sync-section"><h3>微信资料同步</h3>
+    <p class="muted">按所选会话读取本机文字，清洗后复核入库。定时同步是快照轮询；导出文件模式需要先在工具中重新导出。</p>
+    <div id="wechat-sources"></div><div id="wechat-preview" hidden></div>
+    <details class="import-form wechat-form"><summary>＋ 添加微信会话</summary>
+      <label>本地别名<input id="wechat-label" placeholder="例如：学习交流（用于资料范围）" maxlength="60"></label>
+      <label>准确会话名称<input id="wechat-chat" placeholder="与导出 JSON 的 chat_name 一致" maxlength="200"></label>
+      <label>同步方式<select id="wechat-mode"><option value="file">读取已导出的 JSON（易上手）</option><option value="tool">调用本机导出工具（自动采集）</option></select></label>
+      <div id="wechat-file-fields"><label>JSON 完整路径<input id="wechat-json" placeholder="D:\微信导出\会话\chat_full_parsed.json"></label></div>
+      <div id="wechat-tool-fields" hidden>
+        <label>v1.3.5 源码目录<input id="wechat-tool" placeholder="包含 exporter_core.py 的文件夹"></label>
+        <label>工具使用的 Python<input id="wechat-python" placeholder="已安装工具依赖的 python.exe 完整路径"></label>
+        <label>微信数据目录（可选）<input id="wechat-db" placeholder="留空让导出工具自动识别"></label>
+        <p class="muted">需 Windows 微信已登录。GUI 的 exe 没有命令行接口；自动采集需按说明配置工具 Python 环境。</p>
+      </div>
+      <label>同步间隔（秒）<input id="wechat-interval" type="number" min="30" max="86400" value="300"></label>
+      <button id="wechat-save" class="primary wide">保存会话来源</button>
+      <p class="muted"><a href="https://github.com/zhuzhangxue/wechat-chat-export/releases/tag/v1.3.5" target="_blank" rel="noopener noreferrer">获取微信导出工具 v1.3.5</a> · 仅使用你有权处理的聊天记录。清洗规则不能保证识别所有敏感内容，请在复核时检查。</p>
+    </details><p id="wechat-storage" class="muted"></p>
+  </section>
   <section><div class="row"><h3>知识资料</h3><button id="refresh" class="quiet">刷新索引</button></div><div id="documents"></div><details class="import-form"><summary>＋ 导入 TXT / MD</summary><label class="file-label" for="file">选择本地文件<input id="file" type="file" accept=".txt,.md,text/plain,text/markdown"></label><input id="document-name" placeholder="文件名，例如：分享会.md" aria-label="导入文件名"><textarea id="document-content" rows="5" placeholder="也可以在此粘贴资料正文" aria-label="导入资料正文"></textarea><button id="import" class="primary wide">保存并建立索引</button><p class="muted">文件只发送到本机服务。重新保存同名文件会更新资料。</p></details></section>
   <section><h3>已复核的本人记忆</h3><p class="muted">仅当前范围的训练资料；历史计划不代表已经完成。</p><div id="memories"></div></section>
   <section><h3>当前范围的本人事实</h3><p class="muted">具体纠正可在回复下方填写。</p><div id="facts"></div></section>
@@ -133,4 +152,5 @@
 <script src="/courses.js" defer></script>
 <script src="/models.js" defer></script>
 <script src="/setup.js" defer></script>
+<script src="/wechat-sync.js" defer></script>
 </body></html>

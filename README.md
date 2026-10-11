@@ -2,9 +2,9 @@
 
 基于 **LangGraph 单 Agent** 的本地中文对话与课程资料助手。输入课程名、导入文件或添加公开网址，即可收集资料、查看处理进度、按问题检索题目，并用自己配置的模型完成第二轮筛选。原始文件、题目出处、处理结果与会话保存在本机。
 
-**[下载 Windows 便携体验版](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.3/AnotherMe-Portable-Windows-x64.zip)** · [版本说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.3) · [详细使用与构建说明](docs/PORTABLE.md)
+**[下载 Windows 便携体验版](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.4/AnotherMe-Portable-Windows-x64.zip)** · [版本说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.4) · [详细使用与构建说明](docs/PORTABLE.md)
 
-已下载 preview.1 / preview.2：可用 [升级补丁](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.3/AnotherMe-preview1-2-to-preview3-patch.zip)，停止服务及后台任务后复制到原目录覆盖，保留 `user-data`。本次补齐个人资料的本机模型设置，改善密钥保存状态与安装后的 CLI 检测。
+已下载 preview.1 / preview.2 / preview.3：可用 [升级补丁](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.4/AnotherMe-preview1-2-3-to-preview4-patch.zip)，停止服务及后台任务后复制到原目录覆盖，保留 `user-data`。本次新增微信会话同步、复核与记忆持久化；上游导出工具需另行准备，见 [微信同步说明](docs/WECHAT_SYNC.md)。
 
 ![课程资料与补充资料入口，界面内人物资料均为虚构](docs/images/portable-materials.png)
 
@@ -32,6 +32,7 @@
 | 独立设置 | 模型配置与资料查找分开；支持 API 型号目录、手动型号、连接测试和 Windows 加密保存 Key |
 | 本地持久化 | SQLite 保存题库、处理任务、会话和偏好，重启后继续使用 |
 | 个人对话实验 | 独立的五节点 LangGraph 流程，支持来源引用、历史上下文、受限技能与自省；默认使用虚构资料 |
+| 微信资料同步 | 接入 wechat-chat-export v1.3.5 的会话 JSON；支持定时读取、调用外部工具采集、清洗去重、复核与本地记忆持久化；见 [操作说明](docs/WECHAT_SYNC.md) |
 
 模型 API 需要联网及你自己的服务额度。题库模型设置用于找题意图理解与第二轮筛选；个人对话模型在“设置 → 个人资料回答模式”单独填写本机地址、型号，测试并保存后即可启用，便携版不附带模型权重。已安装并登录 Codex CLI 的用户还可选择 ChatGPT 登录方式，它不是便携版的必需项。官方免 CLI 浏览器登录尚未接入，说明见 [便携版文档](docs/PORTABLE.md)。
 
@@ -91,7 +92,8 @@ uv pip install --python .venv\Scripts\python.exe -e ".[dev,privacy,question-bank
 - [课程资料与题库](docs/QUESTION_BANK.md)
 - [界面使用](docs/UI.md) · [架构](docs/ARCHITECTURE.md) · [检索](docs/RETRIEVAL.md) · [技能](docs/SKILLS.md)
 - [便携版实测摘要：14 项流程、8 项浏览器检查](docs/verification/portable-20261009.json)
-- [本次发布验证：独立源码副本 335 项测试通过](docs/verification/publication-20261011.md)
+- [微信同步与升级验证：377 项回归、最终事务调整后 31 项专项、真实 ZIP 升级与本机问答](docs/verification/wechat-sync-20261011.json)
+- [首次源码发布验证：独立副本 335 项测试通过](docs/verification/publication-20261011.md)
 - [发行包第三方组件与许可说明](docs/PORTABLE_NOTICES.txt)
 
 发布源码仅包含程序、测试、文档和明确列出的虚构示例。`.gitignore` 默认排除其余 `data/`、模型权重、微信导出、个人研究记录、`.env`、虚拟环境、构建目录与便携包；可执行体验包通过 GitHub Releases 提供。公开课程资料来自上游项目，下载后仍需遵守原资料的使用要求，本仓库不打包分发课程原件。

@@ -98,6 +98,10 @@ class UIService:
                 self.local_model_warning='本机模型配置无法读取，请重新配置；密钥只能由原 Windows 账户解密。'
         if self.settings.mode=='live' and not self.live_available():raise UIError('界面的真实模型模式仅支持已配置的本机服务。')
         self.agent=ObservedAgent(self.settings,self._progress)
+        if not hasattr(self,'wechat_sync'):
+            from .wechat_sync import WechatSync
+            database=(self.agent.retrieval_repository or self.agent.runtime_repository).path
+            self.wechat_sync=WechatSync(database,self.metadata_path.parent/'wechat-sync-temp')
         for row in self.meta.execute('SELECT * FROM ui_skills'):
             if row['name'] in self.agent.skills._skills:self.agent.skills.enable(row['name'],bool(row['enabled']))
 
@@ -203,6 +207,7 @@ class UIService:
         if self.agent.style_repository:
             scopes|={row[0] for row in self.agent.style_repository.conn.execute('SELECT DISTINCT conversation_id FROM episodes')}
         if self.settings.style_scope:scopes.add(self.settings.style_scope)
+        scopes|={s['scope'] for s in self.wechat_sync.status()['sources']}
         return sorted(scope for scope in scopes if scope)
 
     def _bootstrap(self):
@@ -212,8 +217,11 @@ class UIService:
             with self.meta:self.meta.execute('INSERT OR IGNORE INTO ui_sessions(agent_id,session_id,title,scope,created) VALUES(?,?,?,?,?)',
                 (self.settings.agent.id,row[0],row[0],'',time.time()))
         sessions=[dict(row) for row in self.meta.execute('SELECT session_id AS id,title,scope,created,question_course FROM ui_sessions WHERE agent_id=? ORDER BY created DESC',(self.settings.agent.id,))]
+        wechat_sources=self.wechat_sync.status()['sources']
         return {'name':self.settings.agent.name,'mode':self.settings.mode,'data':self.data,
-                'data_label':{'synthetic':'合成演示资料','wechat':'微信资料副本','configured':'已配置的本地资料'}.get(self.data,'本地资料'),
+                'has_wechat_sync':bool(wechat_sources),
+                'scope_labels':{s['scope']:s['label'] for s in wechat_sources},
+                'data_label':'本地资料 · 微信同步' if wechat_sources else {'synthetic':'合成演示资料','wechat':'微信资料副本','configured':'已配置的本地资料'}.get(self.data,'本地资料'),
                 'live_available':self.live_available(),
                 'model':self.settings.model if self.live_available() else '', 'sessions':sessions,'scopes':self._scopes(),
                 'default_scope':self.settings.style_scope,'skills':self.agent.skills.catalog(include_disabled=True),
@@ -649,6 +657,14 @@ class UIService:
         except Exception:warning='资料已保存；索引刷新失败，下次查询将重试。'
         return {'id':doc,'saved':True,'warning':warning}
 
+    def _review_wechat(self,payload):
+        repo=self.agent.retrieval_repository or self.agent.runtime_repository
+        result=self.wechat_sync.review(repo,payload)
+        if self.agent.retriever:
+            try:self.agent.retriever.refresh('personal')
+            except Exception:result['warning']='资料已保存；索引刷新失败，下次查询将重试。'
+        return result
+
     def _delete_document(self,document_id):
         repo=self.agent.retrieval_repository
         if repo is None:raise UIError('未配置资料库。')
@@ -684,5 +700,6 @@ class UIService:
         return {'mode':mode}
 
     def close(self):
+        self.wechat_sync.close()
         def stop():self.agent.close();self.meta.close()
         self.pool.submit(stop).result();self.pool.shutdown()

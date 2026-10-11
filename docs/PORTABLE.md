@@ -1,8 +1,12 @@
 # Windows 下载体验版
 
-[下载便携 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.3/AnotherMe-Portable-Windows-x64.zip) · [预览版说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.3)
+新增的微信入口见 [微信资料同步说明](WECHAT_SYNC.md)：在“资料 → 个人资料”添加一个会话，读取本机导出并复核入库。个人微信不上传题库模型或 MinerU；自动采集需另行准备上游 v1.3.5 工具环境。
 
-已下载 preview.1 / preview.2 的用户可用 [小补丁 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.3/AnotherMe-preview1-2-to-preview3-patch.zip)：先停止界面并等待后台资料处理结束，把补丁内文件复制到原解压目录，覆盖同名文件，再双击 `Start.bat`。补丁不含 `user-data`；保留原来的资料目录。
+preview.4 已用实际 preview.3 ZIP 应用补丁验收，47.9 秒完成旧资料、会话、加密凭据保留和微信复核后本机 Qwen 问答；Edge 桌面及 390px 界面通过。上游导出格式使用虚构数据库验证，未实际采集真实微信。[验收记录](verification/wechat-sync-20261011.json)
+
+[下载便携 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.4/AnotherMe-Portable-Windows-x64.zip) · [预览版说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.4)
+
+已下载 preview.1 / preview.2 / preview.3 的用户可用 [小补丁 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.4/AnotherMe-preview1-2-3-to-preview4-patch.zip)：先停止界面并等待后台资料处理结束，把补丁内文件复制到原解压目录，覆盖同名文件，再双击 `Start.bat`。补丁不含 `user-data`；保留原来的资料目录。
 
 面向 Windows 10/11 x64 的本地 ZIP。解压后双击 `Start.bat`，程序自带独立 Python、所需 Python 依赖和 LibreOffice 文档转换器，自动打开本机浏览器。重复双击复用同目录的现有服务；端口占用时尝试其他端口。`Stop.bat` 只停止对应解压副本的界面，后台资料任务按既有持久化机制继续或恢复。无需安装 Docker、系统 Python、Word 或 Codex CLI。
 
