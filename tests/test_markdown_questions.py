@@ -129,4 +129,6 @@ def test_settings_and_material_library_are_separate_panels():
     assert 'settings' in parser.owners['skills']
     for element in ('course-library', 'documents', 'memories', 'facts'):
         assert 'materials' in parser.owners[element] and 'settings' not in parser.owners[element]
-    assert '<datalist' not in html and 'role="combobox"' in html
+    course_form=html.split('<form id="course-form"',1)[1].split('</form>',1)[0]
+    assert '<datalist' not in course_form and 'role="combobox"' in course_form
+    assert 'settings' in parser.owners['local-model-url']

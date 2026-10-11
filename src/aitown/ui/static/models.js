@@ -46,6 +46,16 @@ function modelFieldVisibility(){
  $('api-model-fields').hidden=$('question-model-mode').value!=='api';
  $('codex-model-fields').hidden=$('question-model-mode').value!=='codex_chatgpt';
 }
+function secretStorageText(storage){return storage==='windows_encrypted'?'已用当前 Windows 账户加密保存，重启可用':'仅本次有效，关闭程序后需重填';}
+function localModelPayload(){return {base_url:$('local-model-url').value.trim(),model:$('local-model-id').value.trim(),response_format:$('local-model-format').value,
+ api_key:$('local-model-key').value.trim(),remember_key:$('remember-local-model-key').checked,clear_key:$('clear-local-model-key').checked};}
+function renderLocalModelSettings(data){
+ $('local-model-url').value=data.base_url;$('local-model-id').value=data.model;
+ $('local-model-format').value=data.response_format||'json_object';
+ $('local-model-key').value='';$('clear-local-model-key').checked=false;$('remember-local-model-key').checked=data.remember_key;
+ $('local-model-key-state').textContent=data.has_key?secretStorageText(data.key_storage)+'；留空保留。':'未设置 Key；本机无鉴权服务可留空。';
+ $('local-model-status').textContent=data.warning||(data.configured?'连接配置已保存；请确认服务已启动，测试后选择“真实模型 · 本机”。':'尚未配置。启动本机模型服务后，填写地址和型号并保存。');
+}
 function renderModelSettings(data){
  state.modelSettings=data;
  $('question-model-mode').value=data.search_mode;
@@ -56,8 +66,8 @@ function renderModelSettings(data){
  $('model-response-format').value=data.api.response_format;$('model-images').checked=data.api.images;
  $('model-api-key').value='';$('mineru-token').value='';
  $('clear-api-key').checked=false;$('clear-mineru-token').checked=false;
- $('model-key-state').textContent=data.api.has_key?'已有 Key，留空保留；更换服务商或地址需重新填写。':'未设置 Key';
- $('mineru-token-state').textContent=data.mineru_has_token?'已有 Token，留空保留。':'未设置 Token';
+ $('model-key-state').textContent=data.api.has_key?'已有 Key，'+secretStorageText(data.api_key_storage)+'；留空保留，更换服务商或地址需重填。':'未设置 Key';
+ $('mineru-token-state').textContent=data.mineru_has_token?'已有 Token，'+secretStorageText(data.mineru_token_storage)+'；输入框留空保留。':'未设置 Token';
  modelOptions('codex_chatgpt',data.codex_model);$('codex-model-images').checked=data.codex_images;
  $('codex-cli-path').value=data.codex_path||'';
  $('pdf-extractor').value=data.extractor;$('mineru-model').value=data.mineru_model;
@@ -71,13 +81,16 @@ function renderModelSettings(data){
 }
 async function refreshModelSettings(){
  renderModelSettings(await api('/api/model-settings'));
+ renderLocalModelSettings(await api('/api/local-model-settings'));
  const mode=$('question-model-mode').value;
  if(mode==='codex_chatgpt'&&!modelCatalogs.codex_chatgpt)await loadModelCatalog(mode);
  else if(mode==='api'&&!modelCatalogs.api&&state.modelSettings.api.has_key)await loadModelCatalog(mode);
 }
 async function modelSettingsJob(path,payload){
  if(state.busy)return;
- setBusy(true);$('model-settings-status').textContent='正在处理…';
+ const local=path.startsWith('/api/local-model-');
+ const status=$(local?'local-model-status':'model-settings-status');
+ setBusy(true);status.textContent='正在处理…';
  if(path==='/api/model-catalog'&&payload.search_mode==='codex_chatgpt')$('codex-catalog-status').textContent='正在读取 Codex 型号目录…';
  try{
   const {job_id}=await api(path,payload);
@@ -88,6 +101,13 @@ async function modelSettingsJob(path,payload){
    await new Promise(resolve=>setTimeout(resolve,350));
   }
   if(path==='/api/model-settings'){renderModelSettings(result);await refreshBootstrap();}
+  else if(path==='/api/local-model-settings'){renderLocalModelSettings(result);await refreshBootstrap();}
+  else if(path==='/api/local-model-catalog'){
+   const options=$('local-model-options');options.replaceChildren();
+   for(const id of result.models){const option=el('option',id);option.value=id;options.append(option);}
+   if(!$('local-model-id').value)$('local-model-id').value=result.models[0];
+   status.textContent=`读到 ${result.models.length} 个本机型号，选定后请测试并保存。`;
+  }
   else if(path==='/api/model-catalog'){
    const mode=payload.search_mode==='codex_chatgpt'?'codex_chatgpt':'api';
    const choices=result.choices||result.models.map(id=>({id,name:id}));
@@ -98,10 +118,10 @@ async function modelSettingsJob(path,payload){
    if(mode==='codex_chatgpt')$('codex-catalog-status').textContent=message;
   }else if(path==='/api/mineru-sample'){
    $('model-settings-status').textContent=`${result.message} 共 ${result.pages} 页、${result.questions} 题、${result.images} 张原图。${result.notes.join('；')}`;
-  }else $('model-settings-status').textContent=result.message;
+  }else status.textContent=result.message;
   return result;
  }catch(error){
-  $('model-settings-status').textContent=error.message;notice(error.message,true);
+  status.textContent=error.message;notice(error.message,true);
   if(path==='/api/model-catalog'&&payload.search_mode==='codex_chatgpt')$('codex-catalog-status').textContent=error.message+' 已有选择保留，可点击刷新重试。';
  }
  finally{setBusy(false);}
@@ -124,4 +144,7 @@ $('test-model').onclick=()=>modelSettingsJob('/api/model-test',modelSettingsPayl
 $('load-models').onclick=()=>loadModelCatalog('api');
 $('load-codex-models').onclick=()=>loadModelCatalog('codex_chatgpt');
 $('mineru-sample').onclick=()=>modelSettingsJob('/api/mineru-sample',{source_id:Number($('mineru-sample-source').value)});
+$('load-local-models').onclick=()=>modelSettingsJob('/api/local-model-catalog',localModelPayload());
+$('test-local-model').onclick=()=>modelSettingsJob('/api/local-model-test',localModelPayload());
+$('save-local-model').onclick=()=>modelSettingsJob('/api/local-model-settings',localModelPayload());
 renderQuestionModelBadge();

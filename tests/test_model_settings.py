@@ -62,13 +62,88 @@ def test_ui_startup_preserves_explicit_course_credentials_without_serializing_th
 def test_windows_encrypted_keys_survive_restart_without_plaintext(tmp_path):
     config=settings_for_ui(Settings(question_bank_dir=tmp_path/'bank'),tmp_path/'data');metadata=tmp_path/'ui.sqlite3'
     with closing(UIService(config,metadata)) as service:
-        service.call('_save_model_settings',preferences(remember_keys=True))
+        public=service.call('_save_model_settings',preferences(remember_keys=True,extractor='mineru_api'))
+        assert public['mineru_token_storage']=='windows_encrypted'
+        # A later partial save must not silently opt out of persistence or reset
+        # the parser. This also covers blank fields retaining encrypted secrets.
+        public=service.call('_save_model_settings',{'codex_images':False})
+        assert public['remember_keys'] and public['extractor']=='mineru_api'
         saved=service.pool.submit(lambda:service.meta.execute("SELECT value FROM ui_settings WHERE key='model_preferences'").fetchone()[0]).result()
         assert 'protected_api_key' in saved and 'synthetic-llm-secret' not in saved and 'synthetic-mineru-secret' not in saved
     with closing(UIService(config,metadata)) as service:
         assert service.call('_model_settings')['search_mode']=='api'
         assert service.pool.submit(lambda:service.model_preferences.api.api_key).result()=='synthetic-llm-secret'
         assert service.pool.submit(lambda:service.model_preferences.mineru_token).result()=='synthetic-mineru-secret'
+        assert service.call('_model_settings')['mineru_token_storage']=='windows_encrypted'
+
+
+def test_session_only_token_reports_that_restart_will_clear_it(tmp_path):
+    config=settings_for_ui(Settings(question_bank_dir=tmp_path/'bank'),tmp_path/'data');metadata=tmp_path/'ui.sqlite3'
+    with closing(UIService(config,metadata)) as service:
+        result=service.call('_save_model_settings',preferences())
+        assert result['mineru_token_storage']=='session'
+    with closing(UIService(config,metadata)) as service:
+        assert service.call('_model_settings')['mineru_token_storage']=='missing'
+
+
+@pytest.mark.parametrize('url',['https://api.openai.com/v1','http://127.0.0.1.evil.example/v1',
+    'http://user:password@localhost/v1','file:///private','http://localhost/v1?token=secret'])
+def test_personal_model_rejects_non_loopback_or_embedded_credentials(tmp_path,url):
+    config=settings_for_ui(Settings(question_bank_dir=tmp_path/'bank'),tmp_path/'data')
+    with closing(UIService(config,tmp_path/'ui.sqlite3')) as service:
+        with pytest.raises(ValueError):service.call('_save_local_model',{'base_url':url,'model':'test'})
+        assert not service.call('_bootstrap')['live_available']
+
+
+def test_local_personal_model_configure_probe_enable_and_restart(tmp_path,monkeypatch):
+    from pydantic import BaseModel
+    class Probe(BaseModel):ok:bool
+    received=[]
+    def handle(request):
+        received.append(request)
+        assert request.url.host=='127.0.0.1'
+        if request.method=='GET':return httpx.Response(200,json={'data':[{'id':'local-exact'}]})
+        data=json.loads(request.content)
+        assert data['model']=='local-exact'
+        return httpx.Response(200,json={'choices':[{'message':{'content':'{"ok":true}'}}]})
+    original=httpx.Client
+    monkeypatch.setattr(httpx,'Client',lambda **kwargs:original(transport=httpx.MockTransport(handle),**kwargs))
+    config=settings_for_ui(Settings(question_bank_dir=tmp_path/'bank'),tmp_path/'data');metadata=tmp_path/'ui.sqlite3'
+    payload={'base_url':'http://127.0.0.1:11434/v1','model':'local-exact','remember_key':False}
+    with closing(UIService(config,metadata)) as service:
+        assert not service.call('_bootstrap')['live_available']
+        assert service.call('_local_model_operation',payload,'models')['models']==['local-exact']
+        assert service.call('_local_model_operation',payload,'test')['ok']
+        service.call('_save_local_model',payload)
+        assert service.call('_bootstrap')['live_available']
+        service.call('_mode','live')
+        assert service.pool.submit(lambda:service.agent.model.structured([{'role':'user','content':'合成测试'}],Probe)).result().ok
+        # Updating the model while live rebuilds its client, keeping the course
+        # provider and skill selections independent.
+        service.call('_save_local_model',{'base_url':'http://localhost:11434/v1','model':'updated-local'})
+        assert service.pool.submit(lambda:service.agent.model.settings.model).result()=='updated-local'
+        assert service.call('_model_settings')['search_mode']=='none'
+    with closing(UIService(config,metadata)) as service:
+        assert service.call('_bootstrap')['live_available']
+        assert service.call('_local_model_settings')['model']=='updated-local'
+    assert len(received)==3
+
+
+@pytest.mark.skipif(os.name!='nt',reason='Windows current-user DPAPI')
+def test_local_model_key_encrypted_and_endpoint_bound(tmp_path):
+    config=settings_for_ui(Settings(question_bank_dir=tmp_path/'bank'),tmp_path/'data');metadata=tmp_path/'ui.sqlite3'
+    payload={'base_url':'http://127.0.0.1:11434/v1','model':'local-model','api_key':'synthetic-local-secret','remember_key':True}
+    with closing(UIService(config,metadata)) as service:
+        public=service.call('_save_local_model',payload)
+        assert public['key_storage']=='windows_encrypted' and 'synthetic-local-secret' not in json.dumps(public)
+        saved=service.pool.submit(lambda:service.meta.execute("SELECT value FROM ui_settings WHERE key='local_model_preferences'").fetchone()[0]).result()
+        assert 'synthetic-local-secret' not in saved
+    with closing(UIService(config,metadata)) as service:
+        assert service.pool.submit(lambda:service.local_model_preferences.api_key).result()=='synthetic-local-secret'
+        service.call('_save_local_model',{'model':'updated-model'})
+        assert service.call('_local_model_settings')['key_storage']=='windows_encrypted'
+        service.call('_save_local_model',{'base_url':'http://127.0.0.1:11435/v1'})
+        assert not service.call('_local_model_settings')['has_key']
 
 
 def test_model_discovery_without_model_id_and_synthetic_connection_probe(monkeypatch):

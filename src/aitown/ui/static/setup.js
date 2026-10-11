@@ -12,7 +12,6 @@ async function showSetup(){
  await toggleSettings(true);
  if(state.modelSettings?.search_mode==='none'){
   $('question-model-mode').value='api';
-  $('remember-model-keys').checked=true;
   modelFieldVisibility();
  }
  $('setup-status').textContent='可先配置模型，也可以先导入资料、使用本地筛选。';

@@ -53,7 +53,10 @@ class PersistentIndex:
             return False
         if self.generation == row["id"]:
             return True
-        index = faiss.read_index(str(self.path(row["id"])))
+        # FAISS's native Windows fopen cannot handle a Unicode install path.
+        # Python owns the file handle; FAISS still streams the same index format.
+        with self.path(row['id']).open('rb') as stream:
+            index = faiss.read_index(faiss.PyCallbackIOReader(stream.read))
         records = [Item.model_validate_json(r[0]) for r in self.conn.execute(
             "SELECT payload FROM mappings WHERE generation=? ORDER BY position", (row["id"],))]
         if index.d != row["dimension"] or index.ntotal != len(records):
@@ -94,7 +97,8 @@ class PersistentIndex:
             gid = self.conn.execute("INSERT INTO generations(purpose,model,dimension,revisions,provider_state) VALUES(?,?,?,?,?)",
                                     (self.purpose, self.provider.name, dimension, self.revisions(), json.dumps(self.provider.state()))).lastrowid
             temporary = self.path(gid).with_suffix(".tmp")
-            faiss.write_index(index, str(temporary))
+            with temporary.open('wb') as stream:
+                faiss.write_index(index, faiss.PyCallbackIOWriter(stream.write))
             os.replace(temporary, self.path(gid))
             self.conn.executemany("INSERT INTO mappings VALUES(?,?,?)", [(gid, i, item.model_dump_json()) for i, item in enumerate(records)])
             self.conn.execute("INSERT INTO active VALUES(?,?) ON CONFLICT(purpose) DO UPDATE SET generation=excluded.generation", (self.purpose, gid))

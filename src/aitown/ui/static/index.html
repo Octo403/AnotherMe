@@ -49,9 +49,9 @@
     </div>
     <div id="codex-model-fields" hidden>
       <label for="codex-cli-path">Codex CLI 路径（可选）</label><input id="codex-cli-path" type="text" spellcheck="false" placeholder="留空自动查找；或填写 codex.exe / codex.cmd 的完整路径">
-      <p class="muted">已安装仍找不到时，在新的 PowerShell 中运行 where.exe codex，将路径粘贴到这里，再刷新型号并保存。需在当前 Windows 账户下安装并登录 CLI。</p>
+      <p class="muted">程序打开后才安装 CLI，也可直接点击“重新检测 CLI / 刷新型号”，无需重启。仍找不到时，在新的 PowerShell 中运行 where.exe codex，将路径粘贴到这里再刷新并保存。需在当前 Windows 账户下安装并登录 CLI。</p>
       <label for="codex-model-id">Codex 模型型号</label><select id="codex-model-id"><option value="">正在等待型号列表</option></select>
-      <button id="load-codex-models" class="quiet">刷新可用型号</button>
+      <button id="load-codex-models" class="quiet">重新检测 CLI / 刷新型号</button>
       <label class="check-label"><input id="codex-model-images" type="checkbox" checked>同类题判断使用原题截图</label>
       <p id="codex-catalog-status" class="muted" role="status">需要已登录的 Codex CLI；首轮仍为本地检索。</p>
     </div>
@@ -61,12 +61,23 @@
     <label class="check-label"><input id="clear-mineru-token" type="checkbox">清除已有 MinerU Token</label>
     <label for="mineru-model">MinerU 型号</label><select id="mineru-model"><option value="vlm">vlm</option><option value="pipeline">pipeline</option></select>
     <p class="muted">已授权 FDU-Sharing 全部公开课程 PDF，包括公开压缩包内 PDF。上传前重新获取公开副本，不上传微信、个人文档或本地批注。解析选择在下一次准备 / 更新课程时生效，可能消耗服务额度；Word 仍在本机转换。</p>
-    <label class="check-label"><input id="remember-model-keys" type="checkbox">用当前 Windows 账户加密保存 Key / Token</label><p class="muted">不勾选时仅在本次服务中保留，重启需重填。Key 不存入浏览器。</p>
+    <label class="check-label"><input id="remember-model-keys" type="checkbox">用当前 Windows 账户加密保存 Key / Token</label><p id="secret-storage-note" class="muted">勾选后点击保存，重启可继续使用。不勾选时仅本次有效。输入框始终不回显密钥，请看上方保存状态。</p>
     <button id="save-model-settings" class="primary wide">保存模型与解析设置</button>
     <label for="mineru-sample-source">小样本原卷</label><select id="mineru-sample-source"></select><button id="mineru-sample" class="quiet">试解析一份 · 不替换题库</button>
     <p id="model-settings-status" class="model-status" role="status">尚未读取模型配置</p>
   </section>
-  <section><h3>个人资料回答模式</h3><select id="mode" aria-label="回答模式"><option value="demo">离线演示</option><option value="live">真实模型 · 本机</option></select><p id="model-note" class="muted">离线展示资料摘录和工具结果。</p></section>
+  <section class="model-form"><h3>个人资料回答模式</h3><select id="mode" aria-label="回答模式"><option value="demo">离线演示</option><option value="live">真实模型 · 本机</option></select><p id="model-note" class="muted">离线展示资料摘录和工具结果。</p>
+    <p class="muted">便携版不附带大模型。先启动本机的 OpenAI 兼容模型服务，再填写下方连接；题库模型与个人资料模型分别配置。个人资料仅发送到本机地址。</p>
+    <label for="local-model-url">本机模型 API 地址</label><input id="local-model-url" type="url" spellcheck="false" placeholder="http://127.0.0.1:8765/v1">
+    <label for="local-model-id">本机服务加载的模型型号</label><input id="local-model-id" list="local-model-options" spellcheck="false" placeholder="读取型号或填写服务实际加载的名称"><datalist id="local-model-options"></datalist>
+    <button id="load-local-models" class="quiet">读取本机型号</button>
+    <label for="local-model-format">本机模型 JSON 格式</label><select id="local-model-format"><option value="json_object">JSON Object</option><option value="json_schema">JSON Schema</option><option value="plain_json">纯文本 JSON</option></select>
+    <label for="local-model-key">本机服务 Key（无鉴权可留空）</label><input id="local-model-key" type="password" autocomplete="new-password" placeholder="已保存时留空保留"><small id="local-model-key-state" class="muted"></small>
+    <label class="check-label"><input id="clear-local-model-key" type="checkbox">清除本机服务 Key</label>
+    <label class="check-label"><input id="remember-local-model-key" type="checkbox">用当前 Windows 账户加密保存本机服务 Key</label>
+    <div class="row"><button id="test-local-model" class="quiet">测试本机连接</button><button id="save-local-model" class="primary">保存本机模型</button></div>
+    <p id="local-model-status" class="model-status" role="status">尚未配置本机模型。</p>
+  </section>
   <section><h3>本地体验版</h3><p id="document-compatibility" class="muted">PDF、DOCX、MD、TXT 在本机处理。</p><button id="reopen-setup" class="quiet">打开使用引导</button></section>
   <section><h3>技能</h3><p class="muted">开关立即影响下一次调用。</p><div id="skills"></div></section>
   </div>
@@ -82,6 +93,7 @@
       <button id="browse-courses" type="button" class="quiet" aria-expanded="false" aria-controls="available-course-names">浏览全部课程</button>
       <div id="course-picker-results" hidden><p id="course-catalog-results" class="muted" role="status"></p><div id="available-course-names" class="course-catalog-options" role="listbox" aria-label="课程目录"></div></div></div><p id="course-catalog-note" class="muted">读取课程目录中…</p>
       <button id="refresh-course-catalog" type="button" class="quiet">刷新公开课程目录</button>
+      <p class="muted">公开目录无需登录 GitHub。程序独立访问 GitHub API，匿名请求可能受网络出口共享额度或代理限制；浏览器登录不会为程序授权。</p>
       <label for="course-limit">处理范围</label><select id="course-limit"><option value="3">先试 3 份</option><option value="10">先试 10 份</option><option value="">全部资料</option></select>
       <div class="row"><button id="prepare-course" type="submit" class="quiet">获取并准备课程</button><button id="update-course" type="button" class="quiet">更新课程资料</button></div>
       <p class="muted">3 / 10 份用于小批试跑；选择“全部资料”不限本次处理份数。切换范围后需点击“获取并准备课程 / 继续收集”才会提交，运行中的任务仍按原范围完成。更新会重新解析资料，旧题目引用、人工审校与答案配对可能失效。</p>

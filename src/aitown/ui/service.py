@@ -1,5 +1,6 @@
 """All Agent/SQLite work runs on one worker; HTTP polling reads job state only."""
 import json
+import os
 import sqlite3
 import threading
 import time
@@ -16,7 +17,7 @@ from ..models import Reply
 from ..nodes import rag
 from ..runtime import UserStatement
 from ..style import ProfileStore
-from .model_settings import ModelPreferences, api_operation
+from .model_settings import LocalModelPreferences, ModelPreferences, api_operation
 
 
 class UIError(ValueError):
@@ -72,7 +73,8 @@ class UIService:
             api=self.settings.question_api,codex_model=self.settings.question_similar_model,
             codex_images=self.settings.question_similar_images,extractor=self.settings.question_extractor,
             codex_path=self.settings.question_codex_path,
-            mineru_model=self.settings.mineru_api_model,mineru_token=self.settings.mineru_api_key)
+            mineru_model=self.settings.mineru_api_model,mineru_token=self.settings.mineru_api_key,
+            remember_keys=os.name=='nt')
         self.model_settings_warning=''
         saved=self.meta.execute("SELECT value FROM ui_settings WHERE key='model_preferences'").fetchone()
         if saved:
@@ -81,6 +83,19 @@ class UIService:
                 self.model_preferences=ModelPreferences()
                 self.model_settings_warning='加密模型配置无法读取，请在设置中重新填写 Key。'
         self._apply_model_preferences()
+        self.local_model_warning=''
+        self.local_model_preferences=LocalModelPreferences(remember_key=os.name=='nt')
+        if urlparse(self.settings.base_url).hostname in ('127.0.0.1','localhost','::1'):
+            self.local_model_preferences=LocalModelPreferences(base_url=self.settings.base_url,
+                model=self.settings.model,api_key=self.settings.api_key,remember_key=os.name=='nt',
+                response_format=self.settings.llm_response_format)
+        saved=self.meta.execute("SELECT value FROM ui_settings WHERE key='local_model_preferences'").fetchone()
+        if saved:
+            try:
+                self.local_model_preferences=LocalModelPreferences.restore(saved[0])
+                self.settings=self._local_settings(self.local_model_preferences)
+            except (ValueError,ValidationError):
+                self.local_model_warning='本机模型配置无法读取，请重新配置；密钥只能由原 Windows 账户解密。'
         if self.settings.mode=='live' and not self.live_available():raise UIError('界面的真实模型模式仅支持已配置的本机服务。')
         self.agent=ObservedAgent(self.settings,self._progress)
         for row in self.meta.execute('SELECT * FROM ui_skills'):
@@ -88,6 +103,54 @@ class UIService:
 
     def live_available(self):
         return bool(self.settings.model and self.settings.api_key and urlparse(self.settings.base_url).hostname in ('127.0.0.1','localhost','::1'))
+
+    def _local_settings(self,preferences):
+        return self.settings.model_copy(update={'base_url':preferences.base_url,'model':preferences.model,
+            'api_key':preferences.api_key or 'local-only','llm_response_format':preferences.response_format})
+
+    def _secret_storage(self,setting,field,present):
+        if not present:return 'missing'
+        saved=self.meta.execute('SELECT value FROM ui_settings WHERE key=?',(setting,)).fetchone()
+        return 'windows_encrypted' if saved and json.loads(saved[0]).get(field) else 'session'
+
+    def _local_model_settings(self):
+        preferences=self.local_model_preferences
+        return {**preferences.public(),'warning':self.local_model_warning,
+            'key_storage':self._secret_storage('local_model_preferences','protected_api_key',bool(preferences.api_key))}
+
+    def _resolve_local_model(self,payload):
+        old=self.local_model_preferences
+        candidate=LocalModelPreferences.model_validate({**old.model_dump(exclude={'clear_key'}),**payload})
+        if not candidate.api_key and not candidate.clear_key and candidate.base_url==old.base_url:
+            candidate.api_key=old.api_key
+        if candidate.clear_key:candidate.api_key=''
+        return candidate
+
+    def _local_model_operation(self,payload,operation):
+        from ..providers import ProviderConfig
+        candidate=self._resolve_local_model(payload)
+        return api_operation(ProviderConfig(provider='local',base_url=candidate.base_url,
+            model=candidate.model,api_key=candidate.api_key,response_format=candidate.response_format),operation)
+
+    def _save_local_model(self,payload):
+        candidate=self._resolve_local_model(payload)
+        if not candidate.model:raise UIError('请填写本机服务实际加载的模型型号。')
+        stored=candidate.stored()
+        settings=self._local_settings(candidate)
+        agent=None
+        if self.settings.mode=='live':
+            agent=ObservedAgent(settings,self._progress)
+            for name in agent.skills._skills:agent.skills.enable(name,name in self.agent.skills._enabled)
+        try:
+            with self.meta:self.meta.execute("INSERT INTO ui_settings VALUES('local_model_preferences',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",(stored,))
+        except Exception:
+            if agent:agent.close()
+            raise
+        if agent:
+            self.agent.close();self.agent=agent
+        self.local_model_preferences=candidate;self.settings=settings;self.agent.settings=settings
+        self.local_model_warning=''
+        return self._local_model_settings()
 
     def _progress(self,phase):
         with self.lock:
@@ -192,6 +255,8 @@ class UIService:
                         sources.append({'id':source['id'],'name':source['path'].split('/')[2]+' · '+(source['member'] or source['path'].split('/')[-1])})
         from ..question_bank.word import libreoffice_command
         return {**self.model_preferences.public(),'warning':self.model_settings_warning,'sample_sources':sources,
+                'api_key_storage':self._secret_storage('model_preferences','protected_api_key',bool(self.model_preferences.api.api_key)),
+                'mineru_token_storage':self._secret_storage('model_preferences','protected_mineru_token',bool(self.model_preferences.mineru_token)),
                 'documents':{'libreoffice':bool(libreoffice_command()),'pdf':True,'docx_text':True,
                     'directory':str(self.agent.question_bank.config.root.resolve())}}
 
@@ -201,8 +266,10 @@ class UIService:
         return {'complete':True}
 
     def _resolve_model_settings(self,payload):
-        candidate=ModelPreferences.model_validate(payload)
         old=self.model_preferences
+        data={**old.model_dump(exclude={'clear_api_key','clear_mineru_token'}),**payload}
+        if isinstance(payload.get('api',{}),dict):data['api']={**old.api.model_dump(),**payload.get('api',{})}
+        candidate=ModelPreferences.model_validate(data)
         if not candidate.api.api_key and not candidate.clear_api_key and (
             candidate.api.base_url.rstrip('/')==old.api.base_url.rstrip('/') and candidate.api.provider==old.api.provider):
             candidate.api.api_key=old.api.api_key

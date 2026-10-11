@@ -1,12 +1,16 @@
 # Windows 下载体验版
 
-[下载便携 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-Portable-Windows-x64.zip) · [预览版说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.2)
+[下载便携 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.3/AnotherMe-Portable-Windows-x64.zip) · [预览版说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.3)
 
-已下载 preview.1 的用户可用 [小补丁 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-preview1-to-preview2-patch.zip)：先停止界面并等待后台资料处理结束，把补丁内文件复制到原解压目录，覆盖同名文件，再双击 `Start.bat`。补丁不含 `user-data`；保留原来的资料目录。
+已下载 preview.1 / preview.2 的用户可用 [小补丁 ZIP](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.3/AnotherMe-preview1-2-to-preview3-patch.zip)：先停止界面并等待后台资料处理结束，把补丁内文件复制到原解压目录，覆盖同名文件，再双击 `Start.bat`。补丁不含 `user-data`；保留原来的资料目录。
 
 面向 Windows 10/11 x64 的本地 ZIP。解压后双击 `Start.bat`，程序自带独立 Python、所需 Python 依赖和 LibreOffice 文档转换器，自动打开本机浏览器。重复双击复用同目录的现有服务；端口占用时尝试其他端口。`Stop.bat` 只停止对应解压副本的界面，后台资料任务按既有持久化机制继续或恢复。无需安装 Docker、系统 Python、Word 或 Codex CLI。
 
 首次使用引导复用“设置”的模型配置：填写用户自己的 API 地址、Key 与型号，读取型号目录或手动填写，完成合成 JSON 连接测试后保存。勾选加密保存时使用当前 Windows 账户 DPAPI，Key 不写入浏览器存储、公开响应或明文配置；换账户后应重新填写。未配置模型可先选择本地筛选，仍能导入、处理和查询资料。API 负责题库找题意图理解与第二轮筛选，不需要 GPU 或下载本地模型；调用需要联网和自己的服务额度。ChatGPT 登录仍是可选的原有方式，需要用户自己安装、登录 Codex CLI。个人资料回答保持独立配置，便携版默认合成资料、离线模式。
+
+Windows 新配置默认勾选加密保存；旧用户已选择的“仅本次有效”保持不变。填写 MinerU Token 后，勾选“用当前 Windows 账户加密保存 Key / Token”，点击“保存模型与解析设置”。状态应显示“已用当前 Windows 账户加密保存，重启可用”；输入框始终为空，避免回显凭证，空白不表示丢失。若显示“仅本次有效”，关闭服务后确实需要重填。密钥保存在 `user-data/application/ui.sqlite3` 的加密偏好中，更新时必须保留原 `user-data`，也不能跨 Windows 账户直接解密。
+
+个人资料的“真实模型 · 本机”需要单独连接本机已运行的 OpenAI 兼容服务。在“设置 → 个人资料回答模式”填写 API 地址、读取或填写实际模型型号，测试连接并保存后即可选择真实模型模式。无鉴权服务 Key 可留空；有鉴权时填写本机服务自己的 Key。只接受 `127.0.0.1`、`localhost`、`::1`，不会复用在线题库模型发送个人资料。源码开发机已有的 Qwen 服务示例为 `http://127.0.0.1:8765/v1`、`qwen3-4b-local`，JSON 格式选 JSON Schema；该模型权重约 2.5 GB，未随便携版分发。连接配置保存不等于模型已启动，请先启动自己的服务。
 
 资料保存位置：
 
@@ -42,11 +46,15 @@ codex --version
 codex login status
 ```
 
-修复版会读取更新后的 Windows PATH，并检查常见安装目录。若仍找不到，在“设置 → ChatGPT 登录 → Codex CLI 路径”粘贴 `where.exe codex` 返回的完整路径（如 `C:\Users\用户名\AppData\Roaming\npm\codex.cmd`），点击“刷新可用型号”再保存。这个路径同时用于型号读取与第二轮筛题，重启后保留。可选环境变量为 `AITOWN_CODEX_PATH`。CLI 必须能在当前 Windows 账户中运行并登录；仅在 WSL、编辑器插件或其他 Windows 账户里登录不足以供当前便携版使用。不要复制或上传登录凭证文件。
+修复版每次检测都会读取更新后的 Windows PATH、相关环境变量，并检查常见安装目录。在程序已打开后安装 CLI，也可直接点击“重新检测 CLI / 刷新型号”，无需重启。若仍找不到，在“设置 → ChatGPT 登录 → Codex CLI 路径”粘贴 `where.exe codex` 返回的完整路径（如 `C:\Users\用户名\AppData\Roaming\npm\codex.cmd`），再刷新并保存。这个路径同时用于型号读取与第二轮筛题，重启后保留。可选环境变量为 `AITOWN_CODEX_PATH`。CLI 必须能在当前 Windows 账户中运行并登录；仅在 WSL、编辑器插件或其他 Windows 账户里登录不足以供当前便携版使用。不要复制或上传登录凭证文件。
 
 `codex login status` 用于查看当前认证状态，参见 [OpenAI 官方认证说明](https://learn.chatgpt.com/docs/auth)。
 
+免 CLI 的官方浏览器登录已有接入路线：[Sign in with ChatGPT — ChatGPT plan usage](https://developers.openai.com/siwc/token-sharing-open-source)。开源本地应用可通过官方 OAuth 请求使用符合资格的用户订阅额度；仅身份登录成功不足以授权模型调用，须获得相应权限并实际完成请求，仍受资格和额度限制。AnotherMe 当前尚未接入此独立流程，界面的 ChatGPT 选项仍通过 Codex CLI；仅打开 chatgpt.com 登录不能让应用自动调用模型。实现需要注册、回调校验、加密保存与刷新凭证，以及 Responses API 适配，参见 [官方集成示例](https://developers.openai.com/cookbook/articles/sign-in-with-chatgpt)。
+
 “刷新全部课程目录”需要访问 GitHub。失败时现在会显示具体 HTTP 状态码或连接原因，保留原目录和已收集资料：403 / 429 可能是限流，按提示的时间重试；其他 403 表示访问被拒绝，407 表示代理要求认证，404 表示仓库或分支未找到。不要连续点击刷新。公开接口的匿名额度与网络出口相关，参见 [GitHub 官方排错说明](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api)。无法联网刷新时，仍可使用已有题库或上传本地文件；添加网址仍需网络。
+
+公开目录不要求 GitHub 登录。程序的 HTTP 客户端不读取浏览器 Cookie，浏览器登录不会自动给程序的 API 请求授权。匿名公开 REST 请求通常为每个出口 IP 每小时 60 次，学校网络、共享代理可能共用额度，参见 [GitHub 官方限流说明](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)。登录浏览器后重开程序恰好成功，不能据此判定需要登录；具体原因须看当次状态码与限流提示。
 
 文档处理支持 PDF、DOC、DOCX、MD、TXT、HTML 与 ZIP；若构建时带入 7-Zip，则还支持 RAR / 7z。DOC / DOCX 使用包内 LibreOffice，独立临时配置禁止宏。转换在短临时目录完成，校验生成 PDF 后复制回资料库，避免解压路径较长导致转换器失败；原件始终保留。转换后字体、公式和分页可能与 Word 不同，仍需对照原件。DOCX 转换失败时保留可读文字、公式、附图与处理提示。扫描 PDF、旧式嵌入公式、混排答案等仍按原有缺失和待审校规则处理，不把未识别内容当作完整题目。
 

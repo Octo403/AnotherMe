@@ -63,3 +63,29 @@ def test_incomplete_install_distinguished_from_missing(isolated_install):
     (isolated_install/'codex.cmd').touch()
     with pytest.raises(ValueError, match='已找到 Codex 入口'):
         codex_cli.codex_command()
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Windows registry environment')
+def test_install_after_start_with_new_environment_variable(isolated_install,monkeypatch):
+    import winreg
+    from contextlib import nullcontext
+    # The application process keeps its original PATH and has no NVM variable.
+    monkeypatch.delenv('ANOTHERME_TEST_NODE_HOME',raising=False)
+    monkeypatch.setattr(codex_cli,'windows_path',windows_path_original)
+    registry=[]
+    monkeypatch.setattr(winreg,'OpenKey',lambda *args:nullcontext('registry'))
+    def value(key,index):
+        if index>=len(registry):raise OSError('end')
+        return registry[index]
+    monkeypatch.setattr(winreg,'EnumValue',value)
+    with pytest.raises(ValueError,match='当前未找到'):
+        codex_cli.codex_command()
+    custom=isolated_install/'installed after startup';custom.mkdir()
+    binary=custom/'codex.exe';binary.touch()
+    registry.extend([('ANOTHERME_TEST_NODE_HOME',str(custom),winreg.REG_SZ),
+        ('Path','%anotherme_test_node_home%',winreg.REG_EXPAND_SZ)])
+    assert Path(codex_cli.codex_command()[0])==binary
+    assert 'ANOTHERME_TEST_NODE_HOME' not in os.environ
+
+
+windows_path_original=codex_cli.windows_path

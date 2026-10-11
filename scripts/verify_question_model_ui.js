@@ -26,6 +26,7 @@ const saved={search_mode:'none',api:{provider:'deepseek',base_url:'https://api.d
  codex_model:'',codex_images:true,extractor:'basic',mineru_model:'vlm',mineru_has_token:false,
  remember_keys:false,data_scope:'仅题库与找题消息',sample_sources:[]};
 const state={busy:false,bootstrap:{question_model:'none'}};
+const savedLocal={base_url:'http://127.0.0.1:8765/v1',model:'',remember_key:true,has_key:false,configured:false};
 const requests=[];
 let currentJob,failNext=false;
 const sandbox={state,console,setTimeout,
@@ -36,13 +37,18 @@ const sandbox={state,console,setTimeout,
  api:async(path,payload)=>{
   if(path==='/api/job?id=fixture')return currentJob;
   if(path==='/api/model-settings'&&!payload)return structuredClone(saved);
+  if(path==='/api/local-model-settings'&&!payload)return structuredClone(savedLocal);
   requests.push({path,payload});
   if(failNext){currentJob={status:'failed',error:'模拟连接失败'};failNext=false;}
   else if(path==='/api/model-settings'){
    Object.assign(saved,payload,{api:{...payload.api,has_key:!!payload.api.api_key},mineru_has_token:!!payload.mineru_token});
    delete saved.api.api_key;delete saved.mineru_token;
    currentJob={status:'complete',result:structuredClone(saved)};
-  }else if(path==='/api/model-catalog')currentJob={status:'complete',result:payload.search_mode==='codex_chatgpt'?
+  }else if(path==='/api/local-model-settings'){
+   Object.assign(savedLocal,payload,{has_key:!!payload.api_key,configured:!!payload.model});delete savedLocal.api_key;
+   currentJob={status:'complete',result:structuredClone(savedLocal)};
+  }else if(path==='/api/local-model-catalog')currentJob={status:'complete',result:{models:['local-exact']}};
+  else if(path==='/api/model-catalog')currentJob={status:'complete',result:payload.search_mode==='codex_chatgpt'?
    {models:['account-default','account-alternative'],choices:[{id:'account-default',name:'Default model',is_default:true},{id:'account-alternative',name:'Alternative model'}]}:
    {models:['exact-model','other-model']}};
   else currentJob={status:'complete',result:{message:'合成测试通过'}};
@@ -116,6 +122,21 @@ async function main(){
  assert.equal(saved.api.model,'manual-provider-model');
  assert.equal(controls.get('model-manual-id').value,'');
  checks.manual_model_works_without_catalog=true;
+ sandbox.renderModelSettings({...saved,mineru_has_token:true,mineru_token_storage:'windows_encrypted'});
+ assert(controls.get('mineru-token-state').textContent.includes('重启可用'));
+ sandbox.renderModelSettings({...saved,mineru_has_token:true,mineru_token_storage:'session'});
+ assert(controls.get('mineru-token-state').textContent.includes('关闭程序后需重填'));
+ checks.secret_persistence_status_distinguishes_session_from_saved=true;
+ sandbox.renderLocalModelSettings(savedLocal);
+ await controls.get('load-local-models').onclick();
+ assert.equal(controls.get('local-model-id').value,'local-exact');
+ controls.get('local-model-key').value='synthetic-local-key';
+ await controls.get('test-local-model').onclick();
+ assert.equal(controls.get('local-model-key').value,'synthetic-local-key');
+ await controls.get('save-local-model').onclick();
+ assert.equal(savedLocal.model,'local-exact');assert.equal(controls.get('local-model-key').value,'');
+ assert.equal(saved.api.model,'manual-provider-model');
+ checks.personal_local_model_catalog_probe_save_separate_from_course=true;
  console.log(JSON.stringify({checks,passed:true,note:'真实 JS 事件 + DOM fixture；未进行浏览器视觉验收或线上模型推理'},null,2));
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

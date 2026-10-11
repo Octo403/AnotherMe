@@ -128,6 +128,21 @@ def test_tfidf_restart_empty_and_document_purpose_isolation(tmp_path):
         repo.close()
 
 
+def test_unicode_index_directory_search_after_restart(tmp_path):
+    repo=Repository(tmp_path/'application.sqlite3')
+    directory=tmp_path/'中文 路径'/'资料索引'
+    search=Retriever(repo,directory)
+    try:
+        repo.add_document('合成资料.md','雨天出门带伞')
+        assert search.search('雨天').status=='ok'
+        search.close();search=Retriever(repo,directory)
+        result=search.search('雨天')
+        assert result.status=='ok' and result.hits[0].item.text=='雨天出门带伞'
+        assert not result.warnings
+    finally:
+        search.close();repo.close()
+
+
 def test_failed_rebuild_keeps_previous_active_generation(tmp_path, monkeypatch):
     repo = Repository(tmp_path/'app.sqlite3')
     search = Retriever(repo, tmp_path/'index', Embedding(), allow_fallback=False)

@@ -1,12 +1,54 @@
 """Course-only model preferences, independent of the personal-agent model."""
 import json
+from urllib.parse import urlparse
 from typing import Literal
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ..providers import ProviderConfig
 from .secrets import protect, unprotect
+
+
+class LocalModelPreferences(BaseModel):
+    """Personal evidence can only be sent to a loopback model service."""
+    model_config = {'extra': 'forbid'}
+    base_url: str = Field(default='http://127.0.0.1:8765/v1', max_length=2048)
+    model: str = Field(default='', max_length=200)
+    response_format: Literal['json_object','json_schema','plain_json'] = 'json_object'
+    api_key: str = Field(default='', repr=False, exclude=True, max_length=8192)
+    remember_key: bool = False
+    clear_key: bool = False
+
+    @field_validator('base_url')
+    @classmethod
+    def loopback(cls, value):
+        value = value.strip().rstrip('/')
+        ProviderConfig(base_url=value)
+        if urlparse(value).hostname not in ('127.0.0.1', 'localhost', '::1'):
+            raise ValueError('个人资料模型仅支持本机地址：127.0.0.1、localhost 或 ::1。')
+        return value
+
+    @field_validator('model')
+    @classmethod
+    def clean_model(cls, value):
+        return value.strip()
+
+    def public(self):
+        return {**self.model_dump(exclude={'clear_key'}), 'has_key': bool(self.api_key),
+                'configured': bool(self.model)}
+
+    def stored(self):
+        data = self.model_dump(exclude={'clear_key'})
+        if self.remember_key:
+            data['protected_api_key'] = protect(self.api_key)
+        return json.dumps(data, ensure_ascii=False)
+
+    @classmethod
+    def restore(cls, value):
+        data = json.loads(value)
+        data['api_key'] = unprotect(data.pop('protected_api_key', ''))
+        return cls.model_validate(data)
 
 
 class ModelPreferences(BaseModel):

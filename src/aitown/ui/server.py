@@ -51,6 +51,7 @@ def make_server(service,port=8501,*,desktop=None):
                     self.send(200,body,mime,filename=name,attachment=mime!='application/pdf');return
                 elif parsed.path=='/api/bootstrap':result=service.call('_bootstrap')
                 elif parsed.path=='/api/model-settings':result=service.call('_model_settings')
+                elif parsed.path=='/api/local-model-settings':result=service.call('_local_model_settings')
                 elif parsed.path=='/api/history':result=service.call('_history',query.get('session',[''])[0])
                 elif parsed.path=='/api/maintenance':result=service.call('_maintenance',query.get('session',[''])[0])
                 elif parsed.path=='/api/course-status':result=service.call('_course_status',query.get('course',[None])[0])
@@ -90,6 +91,9 @@ def make_server(service,port=8501,*,desktop=None):
                 '/api/model-settings':('_save_model_settings',payload),
                 '/api/model-test':('_test_model_settings',payload),
                 '/api/model-catalog':('_model_catalog',payload),
+                '/api/local-model-settings':('_save_local_model',payload),
+                '/api/local-model-test':('_local_model_operation',payload,'test'),
+                '/api/local-model-catalog':('_local_model_operation',payload,'models'),
                 '/api/mineru-sample':('_mineru_sample',payload),
                 '/api/course-catalog':('_discover_courses',payload)}
             if parsed.path=='/api/desktop-stop' and desktop is not None:

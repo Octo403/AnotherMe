@@ -1,6 +1,7 @@
 """Locate the locally installed CLI without a shell or access to credentials."""
 import os
 import platform
+import re
 import shutil
 from pathlib import Path
 
@@ -8,17 +9,37 @@ from pathlib import Path
 def windows_path():
     """Explorer and already running apps can retain PATH from before an install."""
     import winreg
-    paths = [os.environ.get('PATH', '')]
-    for hive, key in ((winreg.HKEY_CURRENT_USER, r'Environment'),
-                      (winreg.HKEY_LOCAL_MACHINE, r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment')):
+    environment = {name.upper(): value for name, value in os.environ.items()}
+    paths = []
+    for hive, key in ((winreg.HKEY_LOCAL_MACHINE, r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'),
+                      (winreg.HKEY_CURRENT_USER, r'Environment')):
         try:
             with winreg.OpenKey(hive, key) as registry:
-                value, _ = winreg.QueryValueEx(registry, 'Path')
-            if isinstance(value, str):
-                paths.append(os.path.expandvars(value))
+                index = 0
+                while True:
+                    try:
+                        name, value, _ = winreg.EnumValue(registry, index)
+                    except OSError:
+                        break
+                    index += 1
+                    if not isinstance(value, str):
+                        continue
+                    if name.upper() == 'PATH':
+                        paths.append(value)
+                    else:
+                        environment[name.upper()] = value
         except OSError:
             continue
-    return os.pathsep.join(paths)
+    # Expand newly installed NVM_HOME / NVM_SYMLINK without changing this
+    # process's global environment or requiring Explorer to be restarted.
+    def expand(value):
+        for _ in range(8):
+            updated = re.sub(r'%([^%]+)%', lambda m: environment.get(m[1].upper(), m[0]), value)
+            if updated == value:
+                break
+            value = updated
+        return value
+    return os.pathsep.join([*(expand(path) for path in paths), os.environ.get('PATH', '')])
 
 
 def installation_directories():

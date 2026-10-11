@@ -2,17 +2,15 @@
 
 基于 **LangGraph 单 Agent** 的本地中文对话与课程资料助手。输入课程名、导入文件或添加公开网址，即可收集资料、查看处理进度、按问题检索题目，并用自己配置的模型完成第二轮筛选。原始文件、题目出处、处理结果与会话保存在本机。
 
-**[下载 Windows 便携体验版](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-Portable-Windows-x64.zip)** · [版本说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.2) · [详细使用与构建说明](docs/PORTABLE.md)
+**[下载 Windows 便携体验版](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.3/AnotherMe-Portable-Windows-x64.zip)** · [版本说明](https://github.com/Octo403/AnotherMe/releases/tag/v0.1.0-preview.3) · [详细使用与构建说明](docs/PORTABLE.md)
 
-已下载 preview.1：可用 [约 290 KB 升级补丁](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-preview1-to-preview2-patch.zip)，停止服务及后台任务后复制到原目录覆盖，保留 `user-data`。本次修复 Codex 路径检测、课程目录错误提示，并增加启动日志。
-
-已下载 preview.1：可用 [约 290 KB 升级补丁](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.2/AnotherMe-preview1-to-preview2-patch.zip)，停止服务及后台任务后复制到原目录覆盖，保留 `user-data`。本次修复 Codex 路径检测、课程目录错误提示，并增加启动日志。
+已下载 preview.1 / preview.2：可用 [升级补丁](https://github.com/Octo403/AnotherMe/releases/download/v0.1.0-preview.3/AnotherMe-preview1-2-to-preview3-patch.zip)，停止服务及后台任务后复制到原目录覆盖，保留 `user-data`。本次补齐个人资料的本机模型设置，改善密钥保存状态与安装后的 CLI 检测。
 
 ![课程资料与补充资料入口，界面内人物资料均为虚构](docs/images/portable-materials.png)
 
 ## 下载后怎么用
 
-面向 **Windows 10 / 11 x64**，ZIP 约 **708 MB**，自带 Python、应用依赖和 LibreOffice 文档转换器。无需另装 Python、Word、Docker 或 Codex CLI。当前为预览版，已在开发者 Windows 本机验证，尚未覆盖干净虚拟机和其他系统。
+面向 **Windows 10 / 11 x64**，ZIP 约 **710 MB**，自带 Python、应用依赖和 LibreOffice 文档转换器。无需另装 Python、Word、Docker 或 Codex CLI。当前为预览版，已在开发者 Windows 本机验证，尚未覆盖干净虚拟机和其他系统。
 
 1. 从上面的下载链接获取 `AnotherMe-Portable-Windows-x64.zip`，**完整解压**到可写目录。
 2. 双击 `Start.bat`，浏览器自动打开本机页面；重复双击会复用当前副本的服务。
@@ -35,7 +33,7 @@
 | 本地持久化 | SQLite 保存题库、处理任务、会话和偏好，重启后继续使用 |
 | 个人对话实验 | 独立的五节点 LangGraph 流程，支持来源引用、历史上下文、受限技能与自省；默认使用虚构资料 |
 
-模型 API 需要联网及你自己的服务额度。题库模型设置用于找题意图理解与第二轮筛选；个人对话模型另行配置，便携版默认离线演示。已安装并登录 Codex CLI 的用户还可选择 ChatGPT 登录方式，它不是便携版的必需项。
+模型 API 需要联网及你自己的服务额度。题库模型设置用于找题意图理解与第二轮筛选；个人对话模型在“设置 → 个人资料回答模式”单独填写本机地址、型号，测试并保存后即可启用，便携版不附带模型权重。已安装并登录 Codex CLI 的用户还可选择 ChatGPT 登录方式，它不是便携版的必需项。官方免 CLI 浏览器登录尚未接入，说明见 [便携版文档](docs/PORTABLE.md)。
 
 DOC / DOCX 由包内 LibreOffice 转换，字体、公式、分页可能与 Word 不同；未能确认题目边界时保留原文件入口。扫描件、复杂公式和答案配对可能需要人工审校。当前便携包未包含 7-Zip，RAR / 7z 需要另行安装转换工具。详细限制见 [题库说明](docs/QUESTION_BANK.md)。
 
